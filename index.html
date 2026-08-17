@@ -1412,39 +1412,56 @@ async function handleFile(file){
   }
 }
 
-// Resize the uploaded image onto a canvas for preview + OCR input.
-function normalizeImage(file){
+// Load the file as an image source, correctly applying EXIF rotation.
+// Mobile camera photos carry an EXIF orientation flag; <img> display
+// auto-rotates for viewing, but a plain new Image() + canvas.drawImage()
+// does NOT reliably re-apply that rotation on many mobile browsers — the
+// thumbnail looks upright while OCR silently reads a sideways image.
+// createImageBitmap with imageOrientation:'from-image' fixes this consistently.
+async function loadOrientedImageSource(file){
+  if(typeof createImageBitmap === 'function'){
+    try{
+      return await createImageBitmap(file, { imageOrientation: 'from-image' });
+    }catch(err){
+      // fall through to the <img> fallback below
+    }
+  }
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onerror = ()=> reject(new Error('Could not read the selected file'));
     reader.onload = ()=>{
       const img = new Image();
       img.onerror = ()=> reject(new Error('Unsupported or corrupted image format'));
-      img.onload = ()=>{
-        const MIN_DIM = 700;   // upscale small crops so OCR has enough detail
-        const MAX_DIM = 1600;  // cap large phone photos for speed
-        let { width, height } = img;
-        const maxSide = Math.max(width, height);
-        let scale = 1;
-        if(maxSide < MIN_DIM) scale = MIN_DIM / maxSide;
-        else if(maxSide > MAX_DIM) scale = MAX_DIM / maxSide;
-        width = Math.round(width * scale);
-        height = Math.round(height * scale);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        resolve({ dataUrl, canvas });
-      };
+      img.onload = ()=> resolve(img);
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
   });
+}
+
+// Resize the uploaded image onto a canvas for preview + OCR input.
+async function normalizeImage(file){
+  const source = await loadOrientedImageSource(file);
+  const MIN_DIM = 700;   // upscale small crops so OCR has enough detail
+  const MAX_DIM = 1600;  // cap large phone photos for speed
+  let width = source.width, height = source.height;
+  const maxSide = Math.max(width, height);
+  let scale = 1;
+  if(maxSide < MIN_DIM) scale = MIN_DIM / maxSide;
+  else if(maxSide > MAX_DIM) scale = MAX_DIM / maxSide;
+  width = Math.round(width * scale);
+  height = Math.round(height * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(source, 0, 0, width, height);
+  if(source.close) source.close(); // release ImageBitmap memory
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  return { dataUrl, canvas };
 }
 
 // Small copy of the image kept in app storage + used in the Stamp name
