@@ -412,6 +412,9 @@ const APPROVER_NAME = "Kim Joo Shik";
 // Receiver/ID search-select in the "Add new stamp" form.
 // URL Web App Apps Script trả danh sách receiver (xem ReceiverAPI.gs)
 const RECEIVER_API_URL = 'https://script.google.com/macros/s/AKfycbznWnp6qP5Pz6FQHId6sAnLuHbq4BA5bP5zBY2N4vg74KfwlU2ud2zaGjb1tlChfc1e/exec';
+// Backend chính (Entries/Meta/ảnh) dùng CHUNG 1 GAS project với Receiver List,
+// nên trỏ về cùng URL. Nếu sau này tách deployment riêng, chỉ cần đổi hằng số này.
+const API_URL = RECEIVER_API_URL;
 
 let EMPLOYEES = []; // được nạp động qua loadReceivers() khi trang khởi động
 
@@ -471,16 +474,36 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 
 async function loadState(){
   try{
-    const r = await window.storage.get('stamp_app_state_v4');
-    if(r && r.value){
-      const parsed = JSON.parse(r.value);
-      state.entries = parsed.entries || [];
-      state.reportBy = parsed.reportBy || "";
-      state.signed = parsed.signed || false;
-      state.signatureDataUrl = parsed.signatureDataUrl || null;
-      state.comment = parsed.comment || null;
+    const res = await fetch(`${API_URL}?action=load`);
+    const data = await res.json();
+    if(data && !data.error){
+      state.entries = data.entries || [];
+      state.reportBy = data.reportBy || "";
+      state.signed = data.signed || false;
+      state.signatureDataUrl = data.signatureDataUrl || null;
+      state.comment = data.comment || null;
+
+      // Sheet chỉ lưu imageFileId/imageUrl (ảnh nằm trên Drive), không lưu
+      // base64 trực tiếp trong ô để tránh vượt giới hạn dung lượng cell.
+      // Ở đây tải lại base64 cho các dòng có ảnh để hiển thị thumbnail
+      // và phục vụ xuất Excel (ExcelJS cần base64, không dùng được URL).
+      await Promise.all(state.entries.map(async (en) => {
+        if(!en.imageDataUrl && en.imageFileId){
+          try{
+            const r = await fetch(`${API_URL}?action=imageBase64&fileId=${encodeURIComponent(en.imageFileId)}`);
+            const j = await r.json();
+            if(j && j.dataUrl) en.imageDataUrl = j.dataUrl;
+          }catch(imgErr){
+            console.error('Không tải được ảnh cho entry', en.id, imgErr);
+          }
+        }
+      }));
+    }else if(data && data.error){
+      console.error('loadState backend error:', data.error);
     }
-  }catch(e){ /* no data yet */ }
+  }catch(e){
+    console.error('loadState failed', e);
+  }
   document.getElementById('fReportBy').value = state.reportBy;
   populateYearSelect();
   renderSignBox();
@@ -488,11 +511,33 @@ async function loadState(){
 }
 async function saveState(){
   try{
-    await window.storage.set('stamp_app_state_v4', JSON.stringify({
-      entries: state.entries, reportBy: state.reportBy,
-      signed: state.signed, signatureDataUrl: state.signatureDataUrl,
-      comment: state.comment
-    }));
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      // dùng text/plain để tránh trình duyệt gửi preflight OPTIONS
+      // (Apps Script Web App không xử lý OPTIONS -> sẽ báo lỗi CORS)
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'save',
+        entries: state.entries,
+        reportBy: state.reportBy,
+        signed: state.signed,
+        signatureDataUrl: state.signatureDataUrl,
+        comment: state.comment
+      })
+    });
+    const data = await res.json();
+    if(data && data.entries){
+      // Backend trả lại entries kèm imageFileId/imageUrl cho ảnh vừa upload
+      // lên Drive. Giữ lại imageDataUrl đang có ở local (không cần tải lại
+      // ngay ảnh vừa lưu xong).
+      const localImages = {};
+      state.entries.forEach(en=>{ if(en.imageDataUrl) localImages[en.id] = en.imageDataUrl; });
+      state.entries = data.entries.map(en => Object.assign({}, en, {
+        imageDataUrl: localImages[en.id] || en.imageDataUrl
+      }));
+    }else if(data && data.error){
+      console.error('saveState backend error:', data.error);
+    }
   }catch(e){ console.error('save failed', e); }
 }
 
