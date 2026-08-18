@@ -1036,17 +1036,12 @@ function renderSignBox(){
         <button class="btn-sign-done" id="btnRetrySign" type="button">✅ Sign now</button>
         <button class="btn-sign-comment" id="btnEditComment" type="button">✎ Edit</button>
       </div>
-      <button class="btn-cancel-choice" id="btnClearComment" type="button">Clear comment</button>
+      <div class="lock-hint">🔒 Locked — unlock to edit</div>
+      <button class="btn-unlock" id="btnUnlockComment" type="button">🔓 Unlock</button>
     `;
-    document.getElementById('btnRetrySign').onclick = ()=> doSignDone();
+    document.getElementById('btnRetrySign').onclick = ()=> requestSignPasswordThenComplete();
     document.getElementById('btnEditComment').onclick = ()=> showCommentInput();
-    document.getElementById('btnClearComment').onclick = ()=>{
-      if(confirm('Clear this comment?')){
-        state.comment = null;
-        saveState();
-        renderSignBox();
-      }
-    };
+    document.getElementById('btnUnlockComment').onclick = ()=> doUnlock();
   }else{
     // Nothing yet — show the initial Sign button
     btn.style.display = 'block';
@@ -1055,8 +1050,19 @@ function renderSignBox(){
   applyLockState();
 }
 
-// Step 1: clicking the main Sign button offers two paths
-document.getElementById('btnSign').addEventListener('click', ()=> showSignChoices());
+// Step 1: clicking the main Sign button asks for the password FIRST.
+// Only after the password is verified do the "Done" / "Not Sign w/Comment" choices appear.
+document.getElementById('btnSign').addEventListener('click', ()=> requestSignPassword());
+
+function requestSignPassword(){
+  const pwd = prompt('Enter password to sign as Kim Joo Shik:');
+  if(pwd === null) return; // cancelled — stay as-is, nothing changes
+  if(pwd !== SIGN_PASSWORD){
+    alert('Incorrect password.');
+    return;
+  }
+  showSignChoices();
+}
 
 function showSignChoices(){
   const box = document.getElementById('signStatus');
@@ -1068,25 +1074,30 @@ function showSignChoices(){
     </div>
     <button class="btn-cancel-choice" id="btnCancelChoice" type="button">Cancel</button>
   `;
-  document.getElementById('btnSignDone').onclick = ()=> doSignDone();
+  document.getElementById('btnSignDone').onclick = ()=> completeSign();
   document.getElementById('btnSignComment').onclick = ()=> showCommentInput();
   document.getElementById('btnCancelChoice').onclick = ()=> renderSignBox();
 }
 
-// "Done" path — same password-protected signing as before
-function doSignDone(){
-  const pwd = prompt('Enter password to sign as Kim Joo Shik:');
-  if(pwd === null){ renderSignBox(); return; }
-  if(pwd !== SIGN_PASSWORD){
-    alert('Incorrect password.');
-    renderSignBox();
-    return;
-  }
+// "Done" path — password was already verified in requestSignPassword(), so just apply the signature
+function completeSign(){
   state.signed = true;
   state.signatureDataUrl = 'data:image/png;base64,' + SIGNATURE_IMAGE_BASE64;
   state.comment = null;
   saveState();
   renderSignBox();
+}
+
+// Used by the "Sign now" button in the comment view — asks the password, then signs directly.
+// If cancelled or the password is wrong, the existing comment is left untouched (not cleared).
+function requestSignPasswordThenComplete(){
+  const pwd = prompt('Enter password to sign as Kim Joo Shik:');
+  if(pwd === null) return;
+  if(pwd !== SIGN_PASSWORD){
+    alert('Incorrect password.');
+    return;
+  }
+  completeSign();
 }
 
 // "Not Sign w/Comment" path — shows a comment box; the result is shown in the same box
@@ -1113,7 +1124,7 @@ function showCommentInput(){
   document.getElementById('btnCancelComment').onclick = ()=> renderSignBox();
 }
 
-// Unlock — same password as signing; removes the signature and unlocks the form
+// Unlock — same password as signing; removes the current signature or comment and unlocks the form
 function doUnlock(){
   const pwd = prompt('Enter password to unlock (remove signature):');
   if(pwd === null) return;
@@ -1121,9 +1132,13 @@ function doUnlock(){
     alert('Incorrect password.');
     return;
   }
-  if(confirm('Unlock the form? This will remove the current signature.')){
+  const msg = (state.signed && state.signatureDataUrl)
+    ? 'Unlock the form? This will remove the current signature.'
+    : 'Unlock the form? This will remove the current comment.';
+  if(confirm(msg)){
     state.signed = false;
     state.signatureDataUrl = null;
+    state.comment = null;
     saveState();
     renderSignBox();
   }
