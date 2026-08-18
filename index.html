@@ -535,10 +535,19 @@ async function saveState(){
       state.entries = data.entries.map(en => Object.assign({}, en, {
         imageDataUrl: localImages[en.id] || en.imageDataUrl
       }));
-    }else if(data && data.error){
-      console.error('saveState backend error:', data.error);
     }
-  }catch(e){ console.error('save failed', e); }
+    if(data && data.error){
+      console.error('saveState backend error:', data.error);
+      alert('Lưu dữ liệu thất bại: ' + data.error);
+    }
+    if(data && data.uploadErrors && data.uploadErrors.length){
+      console.error('uploadErrors:', data.uploadErrors);
+      alert('Đã lưu dữ liệu, nhưng có ảnh bị lỗi upload:\n' + data.uploadErrors.join('\n'));
+    }
+  }catch(e){
+    console.error('save failed', e);
+    alert('Không kết nối được tới server để lưu dữ liệu. Vui lòng thử lại.');
+  }
 }
 
 function factoriesInUse(){
