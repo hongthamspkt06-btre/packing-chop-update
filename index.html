@@ -233,7 +233,9 @@
   .receiver-option .rmeta{font-size:11px;color:var(--muted);margin-top:2px;}
   .receiver-empty{padding:10px;text-align:center;font-size:12px;color:var(--muted);font-style:italic;}
 
-  .table-wrap{overflow-x:auto;}
+  .table-wrap{overflow-x:auto;overflow-y:auto;max-height:560px;position:relative;}
+  .table-wrap table{border-collapse:separate;border-spacing:0;}
+  .table-wrap thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 rgba(0,0,0,.08);}
   footer{margin-top:16px;text-align:center;font-size:11px;color:#8592A3;}
 </style>
 </head>
@@ -331,7 +333,7 @@
           <input type="text" id="fReportBy" placeholder="Reporter name">
         </div>
         <div class="field" style="max-width:210px;">
-          <label>Approved by</label>
+          <label id="lblApprovedBy">Approved by</label>
           <div id="signBox">
             <button id="btnSign" class="btn-primary" style="width:100%;padding:8px 10px;font-size:12px;">🔒 Sign as Kim Joo Shik</button>
             <div id="signStatus" style="font-size:11px;color:var(--muted);margin-top:6px;"></div>
@@ -439,11 +441,21 @@ let state = {
   reportBy: "",
   filter: "ALL",
   yearFilter: "ALL",
-  signed: false,
-  signatureDataUrl: null,
-  comment: null,         // set when "Not Sign w/Comment" is used instead of signing
+  signedByYear: {},      // { "<year>": {signed, signatureDataUrl, comment} } — sign status is tracked
+                          // per calendar year; once a new year starts, that year is unsigned again
   activeSection: "WORKER" // "WORKER" or "QC" — which tab is currently shown
 };
+
+// The "Approved by" sign box always applies to the real current calendar year, so once that
+// year rolls over the form automatically goes back to "not signed" (a fresh year needs a fresh sign-off).
+function currentSignYear(){ return String(new Date().getFullYear()); }
+function currentYearSignData(){
+  const y = currentSignYear();
+  if(!state.signedByYear[y]){
+    state.signedByYear[y] = { signed: false, signatureDataUrl: null, comment: null };
+  }
+  return state.signedByYear[y];
+}
 
 // Year options for the "Add new stamp" form and the Year filter: 2025 through the current year.
 function yearOptionsList(){
@@ -479,9 +491,16 @@ async function loadState(){
     if(data && !data.error){
       state.entries = data.entries || [];
       state.reportBy = data.reportBy || "";
-      state.signed = data.signed || false;
-      state.signatureDataUrl = data.signatureDataUrl || null;
-      state.comment = data.comment || null;
+      state.signedByYear = data.signedByYear || {};
+      // Migrate old saves (from before sign-by-year existed) into the current year's bucket,
+      // so an existing signature isn't silently lost on first load after this update.
+      if(Object.keys(state.signedByYear).length === 0 && (data.signed || data.comment)){
+        state.signedByYear[currentSignYear()] = {
+          signed: data.signed || false,
+          signatureDataUrl: data.signatureDataUrl || null,
+          comment: data.comment || null
+        };
+      }
 
       // Sheet chỉ lưu imageFileId/imageUrl (ảnh nằm trên Drive), không lưu
       // base64 trực tiếp trong ô để tránh vượt giới hạn dung lượng cell.
@@ -520,9 +539,7 @@ async function saveState(){
         action: 'save',
         entries: state.entries,
         reportBy: state.reportBy,
-        signed: state.signed,
-        signatureDataUrl: state.signatureDataUrl,
-        comment: state.comment
+        signedByYear: state.signedByYear
       })
     });
     const data = await res.json();
@@ -1065,39 +1082,43 @@ const SIGN_PASSWORD = 'kimjs2026';
 function renderSignBox(){
   const box = document.getElementById('signStatus');
   const btn = document.getElementById('btnSign');
+  const sign = currentYearSignData();
 
-  if(state.signed && state.signatureDataUrl){
-    // Signed & locked
+  const lbl = document.getElementById('lblApprovedBy');
+  if(lbl) lbl.textContent = 'Approved by (' + currentSignYear() + ')';
+
+  if(sign.signed && sign.signatureDataUrl){
+    // Signed & locked for this year
     btn.style.display = 'none';
     box.innerHTML = `
       <div class="sig-preview">
-        <img src="${state.signatureDataUrl}" alt="signature">
+        <img src="${sign.signatureDataUrl}" alt="signature">
         <span class="sig-signed-label">✓ Signed</span>
       </div>
-      <div class="lock-hint">🔒 Locked — unlock to edit</div>
+      <div class="lock-hint">🔒 Locked for ${currentSignYear()} — unlock to edit</div>
       <button class="btn-unlock" id="btnUnlock" type="button">🔓 Unlock</button>
     `;
     document.getElementById('btnUnlock').onclick = ()=> doUnlock();
-  }else if(state.comment){
+  }else if(sign.comment){
     // Not signed, but a comment was left instead
     btn.style.display = 'none';
     box.innerHTML = `
       <div class="comment-box">
         <div class="comment-label">⚠ Not signed — Comment</div>
-        <div class="comment-text">${escapeHtml(state.comment)}</div>
+        <div class="comment-text">${escapeHtml(sign.comment)}</div>
       </div>
       <div class="sign-choice-row" style="margin-top:6px;">
         <button class="btn-sign-done" id="btnRetrySign" type="button">✅ Sign now</button>
         <button class="btn-sign-comment" id="btnEditComment" type="button">✎ Edit</button>
       </div>
-      <div class="lock-hint">🔒 Locked — unlock to edit</div>
+      <div class="lock-hint">🔒 Locked for ${currentSignYear()} — unlock to edit</div>
       <button class="btn-unlock" id="btnUnlockComment" type="button">🔓 Unlock</button>
     `;
     document.getElementById('btnRetrySign').onclick = ()=> requestSignPasswordThenComplete();
     document.getElementById('btnEditComment').onclick = ()=> showCommentInput();
     document.getElementById('btnUnlockComment').onclick = ()=> doUnlock();
   }else{
-    // Nothing yet — show the initial Sign button
+    // Nothing yet for this year — show the initial Sign button
     btn.style.display = 'block';
     box.innerHTML = '';
   }
@@ -1135,9 +1156,10 @@ function showSignChoices(){
 
 // "Done" path — password was already verified in requestSignPassword(), so just apply the signature
 function completeSign(){
-  state.signed = true;
-  state.signatureDataUrl = 'data:image/png;base64,' + SIGNATURE_IMAGE_BASE64;
-  state.comment = null;
+  const sign = currentYearSignData();
+  sign.signed = true;
+  sign.signatureDataUrl = 'data:image/png;base64,' + SIGNATURE_IMAGE_BASE64;
+  sign.comment = null;
   saveState();
   renderSignBox();
 }
@@ -1157,9 +1179,10 @@ function requestSignPasswordThenComplete(){
 // "Not Sign w/Comment" path — shows a comment box; the result is shown in the same box
 function showCommentInput(){
   const box = document.getElementById('signStatus');
+  const sign = currentYearSignData();
   document.getElementById('btnSign').style.display = 'none';
   box.innerHTML = `
-    <textarea id="commentInput" rows="3" placeholder="Enter comment / reason for not signing...">${escapeHtml(state.comment || '')}</textarea>
+    <textarea id="commentInput" rows="3" placeholder="Enter comment / reason for not signing...">${escapeHtml(sign.comment || '')}</textarea>
     <div class="sign-choice-row" style="margin-top:6px;">
       <button class="btn-sign-comment" id="btnSubmitComment" type="button">Submit</button>
     </div>
@@ -1169,9 +1192,10 @@ function showCommentInput(){
   document.getElementById('btnSubmitComment').onclick = ()=>{
     const text = document.getElementById('commentInput').value.trim();
     if(!text){ alert('Please enter a comment.'); return; }
-    state.signed = false;
-    state.signatureDataUrl = null;
-    state.comment = text;
+    const sign = currentYearSignData();
+    sign.signed = false;
+    sign.signatureDataUrl = null;
+    sign.comment = text;
     saveState();
     renderSignBox();
   };
@@ -1186,13 +1210,14 @@ function doUnlock(){
     alert('Incorrect password.');
     return;
   }
-  const msg = (state.signed && state.signatureDataUrl)
-    ? 'Unlock the form? This will remove the current signature.'
-    : 'Unlock the form? This will remove the current comment.';
+  const sign = currentYearSignData();
+  const msg = (sign.signed && sign.signatureDataUrl)
+    ? 'Unlock the form? This will remove the current signature for ' + currentSignYear() + '.'
+    : 'Unlock the form? This will remove the current comment for ' + currentSignYear() + '.';
   if(confirm(msg)){
-    state.signed = false;
-    state.signatureDataUrl = null;
-    state.comment = null;
+    sign.signed = false;
+    sign.signatureDataUrl = null;
+    sign.comment = null;
     saveState();
     renderSignBox();
   }
@@ -1201,7 +1226,8 @@ function doUnlock(){
 // ---- Lock the data-entry form once the sheet has been signed/approved ----
 const LOCK_FIELD_IDS = ['fFactory','fYear','fStampName','fQty','fStatus','fReportBy'];
 function applyLockState(){
-  const locked = !!(state.signed && state.signatureDataUrl);
+  const sign = currentYearSignData();
+  const locked = !!(sign.signed && sign.signatureDataUrl);
 
   LOCK_FIELD_IDS.forEach(id=>{
     const el = document.getElementById(id);
@@ -1753,6 +1779,7 @@ document.getElementById('btnExport').onclick = async ()=>{
 async function exportToExcel(factories){
   const wb = new ExcelJS.Workbook();
   const exportDate = todayISO();
+  const sign = currentYearSignData(); // signature/comment for the current sign-off year
   const logoImageId = wb.addImage({ base64: LOGO_BASE64, extension: 'png' });
 
   const NAVY = 'FF1B3A63';
@@ -1881,9 +1908,9 @@ async function exportToExcel(factories){
     currentRow += 1;
     const sigRowIdx = currentRow;
     ws.mergeCells(`D${sigRowIdx}:F${sigRowIdx}`);
-    if(state.signed && state.signatureDataUrl){
+    if(sign.signed && sign.signatureDataUrl){
       ws.getRow(sigRowIdx).height = 36;
-      const sigImgId = wb.addImage({ base64: state.signatureDataUrl, extension: 'png' });
+      const sigImgId = wb.addImage({ base64: sign.signatureDataUrl, extension: 'png' });
       const sigW = 110, sigH = 44;
       const dCol = ws.getColumn(4);
       const dWidthPx = Math.round((dCol.width || 12) * 7 + 5);
@@ -1895,10 +1922,10 @@ async function exportToExcel(factories){
         tl: { col: 3, row: sigRowIdx - 1, colOff: sigColOff, rowOff: 0 },
         ext: { width: sigW, height: sigH }
       });
-    }else if(state.comment){
+    }else if(sign.comment){
       ws.getRow(sigRowIdx).height = 26;
       const commentCell = ws.getCell(`D${sigRowIdx}`);
-      commentCell.value = 'Not signed — Comment: ' + state.comment;
+      commentCell.value = 'Not signed — Comment: ' + sign.comment;
       commentCell.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: 'FFB7791F' } };
       commentCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     }else{
