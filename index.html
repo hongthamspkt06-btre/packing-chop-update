@@ -542,17 +542,28 @@ async function loadState(){
       // base64 trực tiếp trong ô để tránh vượt giới hạn dung lượng cell.
       // Ở đây tải lại base64 cho các dòng có ảnh để hiển thị thumbnail
       // và phục vụ xuất Excel (ExcelJS cần base64, không dùng được URL).
-      await Promise.all(state.entries.map(async (en) => {
-        if(!en.imageDataUrl && en.imageFileId){
-          try{
-            const r = await fetch(`${API_URL}?action=imageBase64&fileId=${encodeURIComponent(en.imageFileId)}`);
-            const j = await r.json();
-            if(j && j.dataUrl) en.imageDataUrl = j.dataUrl;
-          }catch(imgErr){
-            console.error('Không tải được ảnh cho entry', en.id, imgErr);
-          }
+      // Gộp thành 1 lần gọi bulk duy nhất (thay vì 1 request riêng cho mỗi
+      // ảnh) -> đây chính là nguyên nhân trang mất ~2 phút để load khi có
+      // nhiều dòng có ảnh (mỗi round-trip tới Apps Script tốn ~1-2s).
+      const idsToFetch = Array.from(new Set(
+        state.entries
+          .filter(en => !en.imageDataUrl && en.imageFileId)
+          .map(en => en.imageFileId)
+      ));
+      if(idsToFetch.length){
+        try{
+          const r = await fetch(`${API_URL}?action=imageBase64Bulk&fileIds=${encodeURIComponent(idsToFetch.join(','))}`);
+          const j = await r.json();
+          const images = (j && j.images) || {};
+          state.entries.forEach(en => {
+            if(!en.imageDataUrl && en.imageFileId && images[en.imageFileId]){
+              en.imageDataUrl = images[en.imageFileId];
+            }
+          });
+        }catch(imgErr){
+          console.error('Không tải được ảnh (bulk):', imgErr);
         }
-      }));
+      }
     }else if(data && data.error){
       console.error('loadState backend error:', data.error);
     }
