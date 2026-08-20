@@ -1527,11 +1527,15 @@ async function handleFile(file){
     document.getElementById('dzPreview').innerHTML = `<img src="${dataUrl}" alt="preview">`;
     document.getElementById('dzHintText').textContent = '✓ Image attached';
 
-    // Small thumbnail kept for the table view and the Excel export
-    const thumb = await makeThumbnail(canvas);
+    // Thumbnail (fast local canvas resize) and OCR (slow) don't depend on
+    // each other — run them concurrently instead of waiting for the
+    // thumbnail before starting OCR.
+    const thumbPromise = makeThumbnail(canvas);
+    const ocrPromise = ocrExtract(canvas, state.activeSection).catch(err => ({ __ocrError: err }));
+    const [thumb, result] = await Promise.all([thumbPromise, ocrPromise]);
     pendingImage = thumb;
+    if(result && result.__ocrError) throw result.__ocrError;
 
-    const result = await ocrExtract(canvas, state.activeSection);
     if(result.factory){
       const sel = document.getElementById('fFactory');
       let found = Array.from(sel.options).some(o=>o.value===result.factory);
@@ -1626,13 +1630,48 @@ function makeThumbnail(sourceCanvas){
 
 // In-browser OCR via Tesseract.js — no server/API call, so it works
 // offline and regardless of how this file is opened.
+//
+// SPEED: the slow part is not the recognize() call itself — it's the
+// one-time cost of downloading tesseract.min.js + the English model and
+// spinning up the WASM worker (often several seconds). getOcrWorker()
+// caches that as a single promise, and warmUpOcrEngine() (called at the
+// bottom of this block) kicks it off in the background as soon as the
+// page is idle, so by the time a user actually attaches a photo the
+// engine is already hot and recognize() runs immediately.
 let ocrWorkerPromise = null;
 function getOcrWorker(){
   if(!ocrWorkerPromise){
-    ocrWorkerPromise = Tesseract.createWorker('eng');
+    ocrWorkerPromise = Tesseract.createWorker('eng').then(async (worker)=>{
+      // Set parameters once, right after creation — not on every
+      // recognize() call — to avoid a redundant worker round-trip
+      // each time an image is read.
+      await worker.setParameters({
+        tessedit_ocr_engine_mode: '1', // LSTM only — skip the slower legacy engine
+        tessedit_pageseg_mode: '6', // treat the label as one uniform block of text (2 short lines)
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.:'
+      });
+      return worker;
+    });
   }
   return ocrWorkerPromise;
 }
+
+// Pre-load the OCR script + worker + language data in the background so
+// the cost is paid before the user needs it, not after they load an image.
+function warmUpOcrEngine(){
+  const start = ()=>{
+    ensureTesseract().then(()=> getOcrWorker()).catch(()=>{
+      // Silent — a real failure here just means the first actual OCR
+      // attempt will retry the load and surface the error normally.
+    });
+  };
+  if('requestIdleCallback' in window){
+    requestIdleCallback(start, { timeout: 4000 });
+  }else{
+    setTimeout(start, 1500);
+  }
+}
+warmUpOcrEngine();
 
 // Convert to grayscale + Otsu auto-threshold (pure black/white).
 // Phone photos of the fabric stamp label carry weave texture (moiré) and
@@ -1690,16 +1729,20 @@ async function ocrExtract(canvas, section){
       throw new Error('OCR engine failed to load — check your internet connection');
     }
   }
-  setOcrStatus('Reading image (first run may take a few seconds)...', 'loading');
-  const worker = await getOcrWorker();
-  await worker.setParameters({
-    tessedit_ocr_engine_mode: '1', // LSTM only — skip the slower legacy engine
-    tessedit_pageseg_mode: '6', // treat the label as one uniform block of text (2 short lines)
-    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.:'
-  });
-  const ocrCanvas = preprocessForOcr(canvas);
+  setOcrStatus('Reading image...', 'loading');
+  // preprocessForOcr (a fast local canvas op) runs while the worker
+  // promise resolves, instead of waiting for the worker first — if the
+  // engine is already warmed up this overlap costs nothing, and on a
+  // cold start it shaves the preprocessing time off the wait.
+  const ocrCanvasPromise = Promise.resolve().then(()=> preprocessForOcr(canvas));
+  const [worker, ocrCanvas] = await Promise.all([getOcrWorker(), ocrCanvasPromise]);
   const { data } = await worker.recognize(ocrCanvas);
   const text = (data && data.text) ? data.text : '';
+  // Worker (square stamp) and QC (circular stamp) use different label
+  // layouts, so each tab needs its own parser:
+  //   Worker (square): line 1 = Factory ("F4"), line 2 = Stamp name as-is ("PA-7")
+  //   QC (circle):      line 1 = code ("PA"), line 2 = "F<n>-<no>" ("F3-2")
+  //                      -> Factory = "F3", Stamp name = "PA-2"
   return section === 'QC' ? parseQCStampLabelText(text) : parseStampLabelText(text);
 }
 
@@ -1731,6 +1774,8 @@ function parseStampLabelText(rawText){
   let stamp_name = '';
   if(candidates.length){
     stamp_name = candidates.sort((a,b)=>b.length - a.length)[0];
+    // Normalize stray OCR spacing around the hyphen, e.g. "PA - 7" -> "PA-7".
+    stamp_name = stamp_name.replace(/\s*-\s*/g, '-').replace(/\s+/g, '');
   }
 
   return { factory, stamp_name };
