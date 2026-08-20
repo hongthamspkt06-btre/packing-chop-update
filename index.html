@@ -1523,15 +1523,16 @@ async function handleFile(file){
   }
   setOcrStatus('Preparing image...', 'loading');
   try{
-    const { dataUrl, canvas } = await normalizeImage(file);
+    const { dataUrl, canvas, ocrCanvas } = await normalizeImage(file);
     document.getElementById('dzPreview').innerHTML = `<img src="${dataUrl}" alt="preview">`;
     document.getElementById('dzHintText').textContent = '✓ Image attached';
 
     // Thumbnail (fast local canvas resize) and OCR (slow) don't depend on
     // each other — run them concurrently instead of waiting for the
-    // thumbnail before starting OCR.
+    // thumbnail before starting OCR. OCR reads from the higher-resolution
+    // ocrCanvas, not the smaller preview canvas.
     const thumbPromise = makeThumbnail(canvas);
-    const ocrPromise = ocrExtract(canvas, state.activeSection).catch(err => ({ __ocrError: err }));
+    const ocrPromise = ocrExtract(ocrCanvas, state.activeSection).catch(err => ({ __ocrError: err }));
     const [thumb, result] = await Promise.all([thumbPromise, ocrPromise]);
     pendingImage = thumb;
     if(result && result.__ocrError) throw result.__ocrError;
@@ -1590,33 +1591,50 @@ async function loadOrientedImageSource(file){
   });
 }
 
-// Resize the uploaded image onto a canvas for preview + OCR input.
+// Resize the uploaded image onto canvases for preview + OCR input.
+//
+// Phone camera photos behave very differently from a desktop file upload:
+// they're typically much higher native resolution, but the stamp itself
+// only occupies a small part of the frame (packaging, hand, background
+// around it) and often has uneven lighting/shadow from holding the phone
+// close. A pre-cropped desktop screenshot/photo doesn't have either
+// problem. So OCR gets its own higher-resolution working copy, separate
+// from the smaller canvas used for on-screen preview + thumbnail.
 async function normalizeImage(file){
   const source = await loadOrientedImageSource(file);
-  const MIN_DIM = 900;   // upscale small crops so OCR has enough detail
-  const MAX_DIM = 1400;  // real-world photos often show the stamp small inside a
-                          // larger frame (packaging, hand, background) — this needs
-                          // to be high enough that the label text itself still has
-                          // enough pixels after resize, even though it costs a bit
-                          // more OCR time than a tight crop would.
-  let width = source.width, height = source.height;
-  const maxSide = Math.max(width, height);
-  let scale = 1;
-  if(maxSide < MIN_DIM) scale = MIN_DIM / maxSide;
-  else if(maxSide > MAX_DIM) scale = MAX_DIM / maxSide;
-  width = Math.round(width * scale);
-  height = Math.round(height * scale);
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, height);
-  ctx.drawImage(source, 0, 0, width, height);
-  if(source.close) source.close(); // release ImageBitmap memory
+  function drawScaled(minDim, maxDim){
+    let width = source.width, height = source.height;
+    const maxSide = Math.max(width, height);
+    let scale = 1;
+    if(maxSide < minDim) scale = minDim / maxSide;
+    else if(maxSide > maxDim) scale = maxDim / maxSide;
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+
+    const c = document.createElement('canvas');
+    c.width = width;
+    c.height = height;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high'; // sharper downscale — keeps label text crisper than the browser default
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(source, 0, 0, width, height);
+    return c;
+  }
+
+  // Preview/thumbnail copy — kept modest for fast on-screen rendering and storage.
+  const canvas = drawScaled(900, 1400);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-  return { dataUrl, canvas };
+
+  // OCR working copy — higher cap so a full-resolution phone photo still
+  // leaves the label with enough real detail, even before any further
+  // crop/upscale done in the OCR retry passes.
+  const ocrCanvas = drawScaled(1000, 2200);
+
+  if(source.close) source.close(); // release ImageBitmap memory
+  return { dataUrl, canvas, ocrCanvas };
 }
 
 // Small copy of the image kept in app storage + used in the Stamp name
@@ -1707,8 +1725,23 @@ function preprocessForOcr(sourceCanvas, { binarize = true } = {}){
   }
 
   if(!binarize){
+    // Contrast-stretch (1st–99th percentile) — phone photos taken with the
+    // phone close to the label often cast a shadow that compresses the
+    // ink/background contrast; this rescales it back to full range before
+    // OCR sees it. Desktop-uploaded, already-well-lit photos pass through
+    // this almost unchanged since their percentiles are already near 0/255.
+    const total = n;
+    let cum = 0, lowP = 0, highP = 255;
+    const lowTarget = total * 0.01;
+    const highBudget = total * 0.01; // pixels allowed above the high cutoff
+    for(let t = 0; t < 256; t++){ cum += hist[t]; if(cum >= lowTarget){ lowP = t; break; } }
+    cum = 0;
+    for(let t = 255; t >= 0; t--){ cum += hist[t]; if(cum >= highBudget){ highP = t; break; } }
+    const range = Math.max(1, highP - lowP);
     for(let i = 0, j = 0; i < d.length; i += 4, j++){
-      d[i] = d[i+1] = d[i+2] = gray[j];
+      let v = Math.round((gray[j] - lowP) * 255 / range);
+      if(v < 0) v = 0; else if(v > 255) v = 255;
+      d[i] = d[i+1] = d[i+2] = v;
     }
     ctx.putImageData(imgData, 0, 0);
     return c;
@@ -1735,6 +1768,33 @@ function preprocessForOcr(sourceCanvas, { binarize = true } = {}){
     d[i] = d[i+1] = d[i+2] = v;
   }
   ctx.putImageData(imgData, 0, 0);
+  return c;
+}
+
+// Crop to the center portion of the image and upscale it back up.
+// Phone camera shots usually have the stamp roughly centered but only
+// taking up a fraction of the frame (background/packaging/hand around
+// it) — this crops out that surrounding clutter and gives the label text
+// significantly more real pixels than the full frame did, which a plain
+// resize can't recover once detail has already been downscaled away.
+function centerCropUpscale(sourceCanvas, cropFraction, minTargetDim){
+  const cw = Math.max(1, Math.round(sourceCanvas.width * cropFraction));
+  const ch = Math.max(1, Math.round(sourceCanvas.height * cropFraction));
+  const sx = Math.round((sourceCanvas.width - cw) / 2);
+  const sy = Math.round((sourceCanvas.height - ch) / 2);
+
+  const shortSide = Math.min(cw, ch);
+  const scale = Math.max(1, minTargetDim / shortSide); // never downscale further
+  const outW = Math.round(cw * scale);
+  const outH = Math.round(ch * scale);
+
+  const c = document.createElement('canvas');
+  c.width = outW;
+  c.height = outH;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(sourceCanvas, sx, sy, cw, ch, 0, 0, outW, outH);
   return c;
 }
 
@@ -1788,38 +1848,61 @@ async function ocrExtract(canvas, section){
   const parse = section === 'QC' ? parseQCStampLabelText : parseStampLabelText;
   const isValid = section === 'QC' ? isValidQCResult : isValidWorkerResult;
 
+  let best = null;
+  function tryUpdate(result){
+    if(isValid(result)) return result;
+    if(scoreOcrResult(result, isValid) > scoreOcrResult(best, isValid)) best = result;
+    return null;
+  }
+
   const otsuCanvas = preprocessForOcr(canvas, { binarize: true });
 
   // Pass 1 (fast path — matches the worker's default parameters, so a
-  // clear photo resolves in a single recognize() call): binarized image,
-  // "single uniform block of text" segmentation.
+  // clear, well-framed photo resolves in a single recognize() call):
+  // full frame, binarized, "single uniform block of text" segmentation.
   let text = await ocrRecognizeText(worker, otsuCanvas, '6');
-  let best = parse(text);
-  if(isValid(best)) return best;
+  let hit = tryUpdate(parse(text));
+  if(hit) return hit;
 
-  // Pass 2: plain grayscale (no binarization) — recovers labels lost when
-  // a glossy/reflective background (foil pouch, plastic film) breaks the
-  // single global threshold used by Pass 1.
+  // Pass 2: center-crop + upscale, binarized — this is the fix for phone
+  // camera photos specifically, where the stamp is small inside a much
+  // larger frame (packaging/hand/background) unlike a pre-cropped desktop
+  // upload; cropping out the clutter and upscaling gives the label text
+  // real extra pixels to be read from.
+  const cropOtsu = preprocessForOcr(centerCropUpscale(canvas, 0.55, 1100), { binarize: true });
+  text = await ocrRecognizeText(worker, cropOtsu, '6');
+  hit = tryUpdate(parse(text));
+  if(hit) return hit;
+
+  // Pass 3: full frame, plain grayscale with contrast-stretch (no
+  // binarization) — recovers labels lost when uneven phone-camera
+  // lighting/shadow or a glossy/reflective background (foil pouch,
+  // plastic film) breaks Pass 1's single global threshold.
   const grayCanvas = preprocessForOcr(canvas, { binarize: false });
   text = await ocrRecognizeText(worker, grayCanvas, '6');
-  let attempt2 = parse(text);
-  if(isValid(attempt2)) return attempt2;
-  if(scoreOcrResult(attempt2, isValid) > scoreOcrResult(best, isValid)) best = attempt2;
+  hit = tryUpdate(parse(text));
+  if(hit) return hit;
 
-  // Pass 3: sparse-text segmentation on the binarized image — helps when
-  // background clutter around the stamp breaks Pass 1's "one text block"
-  // assumption and the real label gets missed entirely.
+  // Pass 4: center-crop + upscale, grayscale — combines both fixes for a
+  // small, poorly-lit stamp in a phone photo.
+  const cropGray = preprocessForOcr(centerCropUpscale(canvas, 0.55, 1100), { binarize: false });
+  text = await ocrRecognizeText(worker, cropGray, '6');
+  hit = tryUpdate(parse(text));
+  if(hit) return hit;
+
+  // Pass 5: sparse-text segmentation on the full-frame binarized image —
+  // helps when background clutter around the stamp breaks Pass 1's "one
+  // text block" assumption and the real label gets missed entirely.
   text = await ocrRecognizeText(worker, otsuCanvas, '11');
-  let attempt3 = parse(text);
+  hit = tryUpdate(parse(text));
   // Restore the default fast mode for the next image.
   await worker.setParameters({ tessedit_pageseg_mode: '6' });
-  if(isValid(attempt3)) return attempt3;
-  if(scoreOcrResult(attempt3, isValid) > scoreOcrResult(best, isValid)) best = attempt3;
+  if(hit) return hit;
 
   // Nothing fully validated — return the best-effort guess so the user
   // still gets a starting point, but the caller's "please double-check"
   // messaging covers the case where fields may be wrong or missing.
-  return best;
+  return best || { factory: '', stamp_name: '' };
 }
 
 // Heuristic parser for the two-line stamp label format, e.g.:
