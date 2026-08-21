@@ -432,6 +432,14 @@ function ensureChartLib(){
           Chart.register(ChartDataLabels);
           Chart._datalabelsRegistered = true;
         }
+        // dashedFactoryGridPlugin is defined further down the script, but Chart.js itself is only
+        // loaded lazily (right here) when the Summary tab first opens. Registering it at plugin-
+        // definition time (script parse) is a no-op because Chart is still undefined then, so the
+        // registration has to happen here instead, once Chart.js actually exists.
+        if(typeof Chart !== 'undefined' && typeof dashedFactoryGridPlugin !== 'undefined' && !Chart._dashedFactoryGridRegistered){
+          Chart.register(dashedFactoryGridPlugin);
+          Chart._dashedFactoryGridRegistered = true;
+        }
       });
   }
   return _chartLibPromise;
@@ -776,7 +784,8 @@ const dashedFactoryGridPlugin = {
     ctx.restore();
   }
 };
-if(typeof Chart !== 'undefined'){ Chart.register(dashedFactoryGridPlugin); }
+// NOTE: actual Chart.register(dashedFactoryGridPlugin) call lives inside ensureChartLib() above,
+// since Chart.js is loaded lazily and isn't defined yet at this point in the script.
 
 // Shared data-label rule for the Summary charts: hide the label entirely when the value is 0/empty.
 function hasNonZeroValue(ctx){
