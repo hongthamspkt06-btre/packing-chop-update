@@ -682,14 +682,14 @@ function renderTable(){
     tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No data yet. Upload a stamp label image to get started.</td></tr>`;
     return;
   }
-  rows.forEach((r)=>{
+  rows.forEach((r, idx)=>{
     const tr = document.createElement('tr');
     const thumb = r.imageDataUrl
       ? `<img class="stamp-thumb" src="${r.imageDataUrl}" alt="stamp">`
       : `<div class="stamp-thumb-empty"></div>`;
     tr.innerHTML = `
       <td><span class="factory-chip">${escapeHtml(r.factory)}</span></td>
-      <td>${r.no}</td>
+      <td>${idx+1}</td>
       <td><div class="stamp-cell">${thumb}<span class="stamp-name-text">${escapeHtml(r.stamp_name)}</span></div></td>
       <td>${escapeHtml(r.receiver)}</td>
       <td>${escapeHtml(r.dept)}</td>
@@ -930,7 +930,10 @@ function compareYearsData(section, yearA, yearB){
   const dataFor = (y)=> FACTORY_LIST.map(f=>{
     const rows = state.entries.filter(e=> entrySection(e)===section && e.factory===f && Number(e.year)===y);
     const using = rows.filter(e=>e.status==='Using').reduce((s,e)=> s + (Number(e.qty)||0), 0);
-    const total = rows.reduce((s,e)=> s + (Number(e.qty)||0), 0);
+    // Total line only counts Using + Usable/Not Use — Broken and Lost are excluded.
+    const total = rows
+      .filter(e=> e.status==='Using' || e.status==='Usable/Not Use')
+      .reduce((s,e)=> s + (Number(e.qty)||0), 0);
     return { using, total };
   });
   const a = dataFor(yearA);
