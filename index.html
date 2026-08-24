@@ -482,7 +482,7 @@ let state = {
   entries: [],          // {id,factory,no,stamp_name,receiver,dept,qty,status,year,imageDataUrl,imgW,imgH,section}
   reportBy: "",
   filter: "ALL",
-  yearFilter: "ALL",
+  yearFilter: String(yearOptionsList()[0]), // default to the latest year (e.g. 2026) instead of "All"
   signedByYear: {},      // { "<year>": {signed, signatureDataUrl, comment} } — sign status is tracked
                           // per calendar year; once a new year starts, that year is unsigned again
   activeSection: "WORKER" // "WORKER" or "QC" — which tab is currently shown
@@ -1130,7 +1130,9 @@ document.querySelectorAll('.tab-btn').forEach(tab=>{
     if(section === state.activeSection) return;
     state.activeSection = section;
     state.filter = 'ALL';
-    state.yearFilter = 'ALL';
+    // Default the year filter to the latest year available for this tab's data
+    // (falls back to the current calendar year if the tab has no entries yet).
+    state.yearFilter = String(yearsInUse()[0] || yearOptionsList()[0]);
     document.querySelectorAll('.tab-btn').forEach(t=> t.classList.toggle('active', t.dataset.section===section));
     render();
   });
