@@ -2046,6 +2046,32 @@ document.getElementById('btnExport').onclick = async ()=>{
       btn.textContent = 'Loading...';
       await ensureExcelJS();
     }
+
+    // Safety net: some rows may still be missing their base64 image data
+    // (e.g. entries whose thumbnail hasn't finished loading yet). Re-fetch
+    // those before building the workbook so the exported Stamp name column
+    // always shows the picture, not just the text.
+    const missingImgIds = Array.from(new Set(
+      filteredRows
+        .filter(e => !e.imageDataUrl && e.imageFileId)
+        .map(e => e.imageFileId)
+    ));
+    if(missingImgIds.length){
+      btn.textContent = 'Loading images...';
+      try{
+        const r = await fetch(`${API_URL}?action=imageBase64Bulk&fileIds=${encodeURIComponent(missingImgIds.join(','))}`);
+        const j = await r.json();
+        const images = (j && j.images) || {};
+        state.entries.forEach(en=>{
+          if(!en.imageDataUrl && en.imageFileId && images[en.imageFileId]){
+            en.imageDataUrl = images[en.imageFileId];
+          }
+        });
+      }catch(imgErr){
+        console.error('Không tải lại được ảnh trước khi export:', imgErr);
+      }
+    }
+
     btn.textContent = 'Exporting...';
     await exportToExcel(factories);
   }catch(err){
@@ -2162,15 +2188,20 @@ async function exportToExcel(factories){
       });
       row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
-      if(r.imageDataUrl){
+      if(r.imageDataUrl && /^data:image\//i.test(r.imageDataUrl)){
         row.height = IMG_ROW_HEIGHT_PT;
         // Text sits to the right of the image (mirrors the on-screen stamp-cell: image + text side by side)
         row.getCell(2).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true, indent: 1 };
-        const imgId = wb.addImage({ base64: r.imageDataUrl, extension: 'jpeg' });
-        ws.addImage(imgId, {
-          tl: { col: 1, row: currentRow - 1, colOff: IMG_COL_OFFSET_EMU, rowOff: 0 },
-          ext: { width: IMG_W_PX, height: IMG_H_PX }
-        });
+        try{
+          const ext = /^data:image\/png/i.test(r.imageDataUrl) ? 'png' : 'jpeg';
+          const imgId = wb.addImage({ base64: r.imageDataUrl, extension: ext });
+          ws.addImage(imgId, {
+            tl: { col: 1, row: currentRow - 1, colOff: IMG_COL_OFFSET_EMU, rowOff: 0 },
+            ext: { width: IMG_W_PX, height: IMG_H_PX }
+          });
+        }catch(imgErr){
+          console.error('Không chèn được ảnh cho dòng', r.stamp_name, imgErr);
+        }
       }else{
         row.height = 18;
       }
