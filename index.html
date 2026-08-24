@@ -2080,12 +2080,16 @@ async function exportToExcel(factories){
   const IMG_W_PX = Math.round(2.6 * CM_TO_PX);
   const IMG_H_PX = Math.round(2.2 * CM_TO_PX);
   const IMG_ROW_HEIGHT_PT = 2.2 * CM_TO_PT;
-  const STAMP_COL_WIDTH_CHARS = 15; // sized to closely frame the 2.6cm image
+  // Column widened to fit the 2.6cm image on the left plus the stamp-name text on the right,
+  // matching the on-screen "stamp-cell" layout (image + text side by side).
+  const STAMP_COL_WIDTH_CHARS = 26;
   const STAMP_COL_WIDTH_PX = Math.round(STAMP_COL_WIDTH_CHARS * 7 + 5);
-  const IMG_COL_OFFSET_EMU = Math.max(0, Math.round(((STAMP_COL_WIDTH_PX - IMG_W_PX) / 2) * 9525));
+  const IMG_LEFT_MARGIN_PX = 3; // small left margin instead of centering, so text fits to the right
+  const IMG_COL_OFFSET_EMU = IMG_LEFT_MARGIN_PX * 9525;
 
   factories.forEach(factory=>{
     const rows = visibleSectionRows().filter(e=>e.factory===factory);
+    if(rows.length===0) return; // safety: never create an empty sheet for a factory with no data
     const ws = wb.addWorksheet(factory);
 
     ws.columns = [
@@ -2146,7 +2150,7 @@ async function exportToExcel(factories){
     rows.forEach(r=>{
       const row = ws.getRow(currentRow);
       row.getCell(1).value = r.no;
-      row.getCell(2).value = r.imageDataUrl ? '' : r.stamp_name;
+      row.getCell(2).value = r.stamp_name; // always show the stamp-name text, image (if any) is layered on top
       row.getCell(3).value = r.receiver;
       row.getCell(4).value = r.dept;
       row.getCell(5).value = r.qty;
@@ -2160,6 +2164,8 @@ async function exportToExcel(factories){
 
       if(r.imageDataUrl){
         row.height = IMG_ROW_HEIGHT_PT;
+        // Text sits to the right of the image (mirrors the on-screen stamp-cell: image + text side by side)
+        row.getCell(2).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true, indent: 1 };
         const imgId = wb.addImage({ base64: r.imageDataUrl, extension: 'jpeg' });
         ws.addImage(imgId, {
           tl: { col: 1, row: currentRow - 1, colOff: IMG_COL_OFFSET_EMU, rowOff: 0 },
@@ -2221,6 +2227,10 @@ async function exportToExcel(factories){
     nameCell.font = { name: FONT_NAME, size: FONT_SIZE, bold: true };
     nameCell.alignment = CENTER;
   });
+
+  if(wb.worksheets.length===0){
+    throw new Error('No data to export for the current filter.');
+  }
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
