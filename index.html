@@ -2034,9 +2034,10 @@ function parseQCStampLabelText(rawText){
 document.getElementById('btnExport').onclick = async ()=>{
   const filteredRows = visibleSectionRows();
   const factories = factoriesInUse().filter(f => filteredRows.some(e=>e.factory===f));
+  // F7 is always exported as a blank form when no F7 records exist.
+  // Therefore an empty current filter is still exportable.
   if(factories.length===0){
-    alert('No data to export for the current filter. Please adjust Factory/Year or add a stamp.');
-    return;
+    console.info('No data in current filter; exporting the F7 blank form.');
   }
   const btn = document.getElementById('btnExport');
   const originalLabel = btn.textContent;
@@ -2087,6 +2088,10 @@ document.getElementById('btnExport').onclick = async ()=>{
 
 async function exportToExcel(factories){
   const wb = new ExcelJS.Workbook();
+
+  // Always include F7 in the exported workbook, even when there is no F7 data.
+  // Other factory sheets are still created according to the current filter.
+  const exportFactories = Array.from(new Set([...(factories || []), 'F7']));
   const exportDate = todayISO();
   const sign = currentYearSignData(); // signature/comment for the current sign-off year
   const logoImageId = wb.addImage({ base64: LOGO_BASE64, extension: 'png' });
@@ -2115,9 +2120,11 @@ async function exportToExcel(factories){
   const IMG_LEFT_MARGIN_PX = 3; // small left margin instead of centering, so text fits to the right
   const IMG_COL_OFFSET_EMU = IMG_LEFT_MARGIN_PX * 9525;
 
-  factories.forEach(factory=>{
-    const rows = visibleSectionRows().filter(e=>e.factory===factory);
-    if(rows.length===0) return; // safety: never create an empty sheet for a factory with no data
+  exportFactories.forEach(factory=>{
+    const dataRows = visibleSectionRows().filter(e=>e.factory===factory);
+    // Keep F7 as a real form even when no data has been entered.
+    // A blank form row is displayed with "-" in every field.
+    const rows = dataRows.length ? dataRows : [null];
     const ws = wb.addWorksheet(factory);
 
     ws.columns = [
@@ -2175,14 +2182,19 @@ async function exportToExcel(factories){
 
     // Data rows
     let currentRow = headerRowIdx + 1;
-    rows.forEach(r=>{
+    rows.forEach((r, rowIndex)=>{
       const row = ws.getRow(currentRow);
-      row.getCell(1).value = r.no;
-      row.getCell(2).value = r.stamp_name; // always show the stamp-name text, image (if any) is layered on top
-      row.getCell(3).value = r.receiver;
-      row.getCell(4).value = r.dept;
-      row.getCell(5).value = r.qty;
-      row.getCell(6).value = r.status;
+
+      // Always restart No. from 1 on every exported sheet.
+      row.getCell(1).value = rowIndex + 1;
+
+      // For an empty form row, show "-" in every field.
+      row.getCell(2).value = r ? (r.stamp_name || '-') : '-';
+      row.getCell(3).value = r ? (r.receiver || '-') : '-';
+      row.getCell(4).value = r ? (r.dept || '-') : '-';
+      row.getCell(5).value = r && r.qty !== '' && r.qty !== null && r.qty !== undefined ? r.qty : '-';
+      row.getCell(6).value = r ? (r.status || '-') : '-';
+
       row.eachCell({ includeEmpty: true }, c=>{
         c.font = baseFont;
         c.alignment = CENTER;
@@ -2190,7 +2202,7 @@ async function exportToExcel(factories){
       });
       row.getCell(3).alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
-      if(r.imageDataUrl && /^data:image\//i.test(r.imageDataUrl)){
+      if(r && r.imageDataUrl && /^data:image\//i.test(r.imageDataUrl)){
         row.height = IMG_ROW_HEIGHT_PT;
         // Text sits to the right of the image (mirrors the on-screen stamp-cell: image + text side by side)
         row.getCell(2).alignment = { horizontal: 'right', vertical: 'middle', wrapText: true, indent: 1 };
