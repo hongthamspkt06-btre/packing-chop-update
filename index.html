@@ -30,7 +30,7 @@
     background:var(--navy);
     color:#fff;
     border-radius:10px;
-    padding:20px 26px;
+    padding:10.5px 26px; /* giảm từ 20px -> ~15mm tổng chiều cao ô */
     margin-bottom:18px;
     display:flex;
     justify-content:space-between;
@@ -56,6 +56,8 @@
   .btn-export{background:#1E8E5A;color:#fff;}
   .btn-export:hover{background:#166b44;}
   .btn-export:disabled{background:#9BB;opacity:.6;cursor:default;}
+  /* Nút Refresh: giảm chiều cao còn ~8.9mm (~33.6px), bằng chiều cao ô "Worker Packing Chop" (padding 9px + font 13px) */
+  #btnRefreshSummary{padding:9px 16px;}
   .btn-del{background:#F5E4E2;color:var(--warn);padding:5px 9px;font-size:12px;font-weight:600;}
   .btn-del:hover{background:#eecdc9;}
 
