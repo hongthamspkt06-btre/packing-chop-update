@@ -69,7 +69,7 @@
     font-size:13px;font-weight:700;letter-spacing:.2px;
   }
   .tab-single .count{
-    display:inline-block;margin-left:8px;font-size:10.5px;
+    display:inline-block;margin-left:8px;font-size:12px;
     background:rgba(255,255,255,.22);border-radius:10px;padding:1px 7px;
   }
   .tab-btn{
@@ -79,7 +79,7 @@
   .tab-btn:hover{background:#E2E7EC;}
   .tab-btn.active{background:var(--navy);color:#fff;}
   .tab-btn .count{
-    display:inline-block;margin-left:8px;font-size:10.5px;
+    display:inline-block;margin-left:8px;font-size:12px;
     background:rgba(0,0,0,.08);border-radius:10px;padding:1px 7px;
   }
   .tab-btn.active .count{background:rgba(255,255,255,.22);}
@@ -101,7 +101,7 @@
     padding:22px 14px;
     text-align:center;
     color:var(--muted);
-    font-size:12.5px;
+    font-size:12px;
     cursor:pointer;
     transition:.15s;
     background:#F7F9FB;
@@ -109,7 +109,7 @@
   .dropzone.drag{border-color:var(--blue-accent);background:#EAF2FA;}
   .dropzone.locked{cursor:default;}
   .dropzone img{max-width:100%;max-height:120px;border-radius:6px;margin-bottom:8px;}
-  .dropzone .hint{font-size:11px;color:#94A3B8;margin-top:4px;}
+  .dropzone .hint{font-size:12px;color:#94A3B8;margin-top:4px;}
 
   .dz-actions{display:flex;gap:8px;justify-content:center;margin:10px 0 4px;flex-wrap:wrap;}
   .dz-btn{
@@ -127,17 +127,19 @@
   .ocr-status.ok{background:#E7F5EC;color:var(--good);}
   .ocr-status.err{background:#FBEAEA;color:var(--warn);}
 
-  label{display:block;font-size:11.5px;color:var(--muted);margin:12px 0 5px;font-weight:600;}
+  label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;font-weight:600;}
   input[type=text],input[type=number],select{
     width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px;
     font-size:13px;font-family:inherit;color:var(--text);background:#fff;
   }
   input:focus,select:focus{outline:2px solid #BBD3EC;border-color:var(--blue-accent);}
+  select:required:invalid{color:var(--muted);} /* placeholder mờ (vd "e.g. F1") khi chưa chọn Factory, giống input::placeholder */
+  select option{color:var(--text);} /* các option trong dropdown vẫn hiển thị màu chữ bình thường */
 
-  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
   th{
     background:var(--navy);color:#fff;text-align:left;padding:9px 10px;
-    font-size:11px;text-transform:uppercase;letter-spacing:.3px;
+    font-size:12px;text-transform:uppercase;letter-spacing:.3px;
   }
   td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
@@ -156,11 +158,11 @@
   .stamp-name-text{font-weight:600;}
 
   .factory-chip{
-    display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700;
+    display:inline-block;padding:2px 9px;border-radius:6px;font-size:12px;font-weight:700;
     background:#EAF2FA;color:var(--blue-accent);
   }
   .status-pill{
-    display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;
+    display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600;
   }
   .pill-ok{background:#E7F5EC;color:var(--good);}
   .pill-bad{background:#FBEAEA;color:var(--warn);}
@@ -176,15 +178,15 @@
     margin-bottom:18px;
   }
   .summary-card h2{margin:0 0 4px;font-size:14px;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;}
-  .summary-card .summary-sub{font-size:11.5px;color:var(--muted);margin-bottom:14px;}
+  .summary-card .summary-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
   .summary-chart-wrap{position:relative;height:261px;}
 
   .summary-pair{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:18px;}
   .summary-chart-card{flex:1 1 320px;min-width:280px;margin-bottom:0;}
   .summary-chart-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
   .summary-chart-head h2{margin-bottom:0;}
-  .summary-year-compare{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);}
-  .summary-year-compare select{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;background:#fff;color:var(--navy);}
+  .summary-year-compare{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+  .summary-year-compare select{padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;color:var(--navy);}
 
   .top-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap;}
   .top-row .field{flex:1;min-width:140px;}
@@ -194,22 +196,22 @@
   .sig-preview{display:flex;align-items:center;gap:8px;}
   .sig-preview img{height:34px;background:#fff;border:1px solid var(--border);border-radius:4px;padding:2px 6px;}
   .sig-signed-label{font-size:11px;color:var(--good);font-weight:700;}
-  .btn-reset-sign{background:transparent;color:var(--muted);text-decoration:underline;padding:2px 0;font-size:10.5px;font-weight:400;}
+  .btn-reset-sign{background:transparent;color:var(--muted);text-decoration:underline;padding:2px 0;font-size:12px;font-weight:400;}
   .lock-hint{font-size:10.5px;color:var(--warn);margin-top:6px;font-weight:600;}
 
   .sign-choice-row{display:flex;gap:6px;}
-  .btn-sign-done{background:var(--good);color:#fff;padding:7px 10px;border-radius:6px;font-size:11.5px;font-weight:700;flex:1;}
+  .btn-sign-done{background:var(--good);color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;font-weight:700;flex:1;}
   .btn-sign-done:hover{background:#166b44;}
-  .btn-sign-comment{background:var(--amber);color:#fff;padding:7px 10px;border-radius:6px;font-size:11.5px;font-weight:700;flex:1;}
+  .btn-sign-comment{background:var(--amber);color:#fff;padding:7px 10px;border-radius:6px;font-size:12px;font-weight:700;flex:1;}
   .btn-sign-comment:hover{background:#93610f;}
-  .btn-cancel-choice{background:transparent;color:var(--muted);text-decoration:underline;padding:4px 0;font-size:10.5px;font-weight:400;width:100%;text-align:center;margin-top:4px;}
+  .btn-cancel-choice{background:transparent;color:var(--muted);text-decoration:underline;padding:4px 0;font-size:12px;font-weight:400;width:100%;text-align:center;margin-top:4px;}
   #commentInput{width:100%;font-family:inherit;font-size:12px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;resize:vertical;}
   .comment-box{background:#FFF6E9;border:1px solid #F0D9B5;border-radius:6px;padding:8px;}
   .comment-label{font-size:11px;font-weight:700;color:var(--amber);}
   .comment-text{font-size:12px;color:var(--text);margin-top:4px;white-space:pre-wrap;word-break:break-word;}
   .btn-unlock{
     display:block;width:100%;margin-top:8px;background:#EAF2FA;color:var(--blue-accent);
-    border:1px solid #BBD3EC;padding:7px 10px;border-radius:6px;font-size:11.5px;font-weight:700;
+    border:1px solid #BBD3EC;padding:7px 10px;border-radius:6px;font-size:12px;font-weight:700;
   }
   .btn-unlock:hover{background:#DCE9F7;}
 
@@ -223,7 +225,7 @@
   }
   .receiver-dropdown.show{display:block;}
   .receiver-option{
-    padding:8px 10px;cursor:pointer;font-size:12.5px;border-bottom:1px solid var(--border);
+    padding:8px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);
   }
   .receiver-option:last-child{border-bottom:none;}
   .receiver-option:hover,.receiver-option.active{background:#EAF2FA;}
@@ -234,7 +236,7 @@
   .table-wrap{overflow-x:auto;overflow-y:auto;max-height:560px;position:relative;}
   .table-wrap table{border-collapse:separate;border-spacing:0;}
   .table-wrap thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 rgba(0,0,0,.08);}
-  footer{margin-top:16px;text-align:center;font-size:11px;color:#8592A3;}
+  footer{margin-top:16px;text-align:center;font-size:12px;color:#8592A3;}
 </style>
 </head>
 <body>
@@ -279,7 +281,8 @@
       <select id="fYear"></select>
 
       <label>Factory</label>
-      <select id="fFactory">
+      <select id="fFactory" required>
+        <option value="" disabled selected hidden>e.g. F1</option>
         <option value="F1">F1</option>
         <option value="F2">F2</option>
         <option value="F3">F3</option>
@@ -1347,6 +1350,11 @@ document.getElementById('btnAdd').onclick = ()=>{
   const receiver = document.getElementById('fReceiver').value.trim();
   const qty = document.getElementById('fQty').value || 1;
   const status = document.getElementById('fStatus').value;
+
+  if(!factory){
+    alert('Please select a Factory before adding.');
+    return;
+  }
 
   if(!stamp_name && !pendingImage){
     alert('Please enter a Stamp name or upload an image before adding.');
