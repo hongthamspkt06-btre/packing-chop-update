@@ -16,6 +16,16 @@
     --good:#1E8E5A;
     --warn:#C0392B;
     --amber:#B7791F;
+    /* --- Sign Status panel palette (aliases so the panel CSS below can stay
+       close to the reusable sign-status-approval-panel skill) --- */
+    --green:#1E8E5A;
+    --green-dim:#E7F5EC;
+    --red:#C0392B;
+    --red-dim:#FBEAEA;
+    --amber-dim:#F6ECD9;
+    --panel2:#F7F9FB;
+    --sub:#6B7280;
+    --mono:Consolas,"SFMono-Regular",Menlo,monospace;
   }
   *{box-sizing:border-box;}
   body{
@@ -119,6 +129,48 @@
   }
   .dz-btn:hover{background:#EAF2FA;}
   .dz-btn:disabled{opacity:.5;cursor:default;background:#F2F4F6;color:var(--muted);border-color:var(--border);}
+  .btn-signoff{background:var(--blue-accent);color:#fff;border:1px solid var(--blue-accent);display:inline-flex;align-items:center;gap:6px;}
+  .btn-signoff:hover{background:#255a94;}
+  .btn-signoff:disabled{opacity:.5;cursor:default;background:#B9C7D9;border-color:#B9C7D9;color:#fff;}
+  .btn-signoff svg{width:13px;height:13px;flex:0 0 auto;}
+  .btn-confirm{background:var(--blue-accent);color:#fff;border:1px solid var(--blue-accent);}
+  .btn-confirm:hover{background:#255a94;}
+  .btn-approve{background:var(--green);color:#fff;border:1px solid var(--green);}
+  .btn-approve:hover{background:#166b45;}
+  .btn-notsign{background:var(--red);color:#fff;border:1px solid var(--red);}
+  .btn-notsign:hover{background:#9c2e21;}
+  .btn-cancel-plain{background:none;border:none;color:#B0B4BA;text-decoration:underline;padding:7px 10px;font-size:12px;font-weight:600;}
+  .btn-cancel-plain:hover{color:#8A8F96;}
+
+  /* ===== Sign Status / Approval panel (ported from sign-status-approval-panel skill) ===== */
+  .lock-notice{
+    background:var(--amber-dim);color:var(--amber);border-radius:6px;padding:8px 10px;
+    font-size:12px;font-weight:600;margin-bottom:12px;
+  }
+  input:disabled,select:disabled,textarea:disabled{background:#F2F4F6;color:var(--muted);cursor:default;}
+  .dropzone.locked{opacity:.6;}
+
+  .status-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.03em;}
+  .status-pending{background:var(--amber-dim);color:var(--amber);}
+  .status-approved{background:var(--green-dim);color:var(--green);}
+  .status-rejected{background:var(--red-dim);color:var(--red);}
+
+  .approval-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+  .approval-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .sig-stamp{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;}
+  .sig-stamp img{height:42px;}
+  .sig-meta{font-size:12px;color:var(--sub);line-height:1.5;font-family:var(--mono);}
+  .sig-meta b{color:var(--text);font-family:inherit;}
+
+  .confirm-box{display:flex;align-items:center;gap:10px;background:var(--amber-dim);border:1px solid #f0d19c;border-radius:8px;padding:8px 12px;flex-wrap:wrap;}
+  .confirm-box span{font-size:12px;color:var(--amber);font-weight:600;}
+  .confirm-box input[type=password]{width:130px;}
+  .confirm-box.reject-box{background:var(--red-dim);border-color:#f3c6c2;flex-direction:column;align-items:stretch;gap:8px;}
+  .confirm-box.reject-box span{color:var(--red);}
+  .confirm-box textarea{width:100%;min-height:56px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:inherit;color:var(--text);resize:vertical;}
+  .reject-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .pw-error{font-size:12px;color:var(--red);font-weight:600;}
+  .approval-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 
   .ocr-status{
     margin-top:10px;font-size:12px;padding:8px 10px;border-radius:6px;display:none;
@@ -139,8 +191,9 @@
 
   table{width:100%;border-collapse:collapse;font-size:12px;}
   th{
-    background:var(--navy);color:#fff;text-align:left;padding:9px 10px;
-    font-size:12px;text-transform:uppercase;letter-spacing:.3px;
+    background:#DCEAF7;color:var(--navy);text-align:left;padding:9px 10px;
+    font-size:12px;font-weight:700;text-transform:none;letter-spacing:.2px;
+    border-bottom:2px solid #B9CFE8;
   }
   td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
@@ -195,58 +248,6 @@
 
   #commentInput{width:100%;font-family:inherit;font-size:12px;padding:7px 8px;border:1px solid var(--border);border-radius:6px;resize:vertical;}
 
-  /* ---- Sign Status card (full-width block at the bottom of the page) ---- */
-  .sign-status-card{margin-top:4.76mm;}
-  .sign-status-card h2{margin:0 0 16px;font-size:14px;font-weight:700;color:var(--text);text-transform:none;letter-spacing:0;}
-  .sign-status-row{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
-  .sign-status-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-
-  .ss-badge{
-    display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;
-    font-size:11.5px;font-weight:700;letter-spacing:.3px;white-space:nowrap;
-  }
-  .ss-badge-pending{background:#FCEEDA;color:var(--amber);}
-  .ss-badge-signed{background:#E7F5EC;color:var(--good);}
-  .ss-badge-comment{background:#FBEAEA;color:var(--warn);}
-
-  .ss-meta{font-size:12.5px;color:var(--text);}
-
-  .ss-sig-box{
-    display:flex;align-items:center;gap:12px;border:1px solid var(--border);
-    border-radius:8px;padding:6px 16px 6px 8px;background:#fff;
-  }
-  .ss-sig-box img{height:36px;width:auto;display:block;}
-  .ss-sig-name{font-weight:700;font-size:13px;color:var(--text);}
-  .ss-sig-date{font-size:11px;color:var(--muted);margin-top:2px;}
-
-  .ss-comment-box{
-    background:#FFF6E9;border:1px solid #F0D9B5;border-radius:6px;padding:8px 12px;
-    max-width:420px;
-  }
-  .ss-comment-label{font-size:11px;font-weight:700;color:var(--amber);}
-  .ss-comment-text{font-size:12px;color:var(--text);margin-top:3px;white-space:pre-wrap;word-break:break-word;}
-
-  .ss-btn-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-
-  .btn-ss-signoff{
-    background:var(--blue-accent);color:#fff;padding:10px 18px;border-radius:8px;
-    font-size:13px;font-weight:600;white-space:nowrap;
-  }
-  .btn-ss-signoff:hover{background:#255a94;}
-
-  .btn-ss-unlock{
-    background:#EEF1F4;color:var(--navy);padding:10px 18px;border-radius:8px;
-    font-size:13px;font-weight:600;white-space:nowrap;
-  }
-  .btn-ss-unlock:hover{background:#E2E7EC;}
-
-  .sign-choice-row{display:flex;gap:6px;}
-  .btn-sign-done{background:var(--good);color:#fff;padding:9px 14px;border-radius:7px;font-size:12.5px;font-weight:700;}
-  .btn-sign-done:hover{background:#166b44;}
-  .btn-sign-comment{background:var(--amber);color:#fff;padding:9px 14px;border-radius:7px;font-size:12.5px;font-weight:700;}
-  .btn-sign-comment:hover{background:#93610f;}
-  .btn-cancel-choice{background:transparent;color:var(--muted);text-decoration:underline;padding:4px 10px;font-size:12px;font-weight:400;}
-
   /* Receiver/ID search-select */
   .receiver-wrap{position:relative;}
   .receiver-dropdown{
@@ -294,6 +295,7 @@
     <!-- LEFT: input card -->
     <div class="card">
       <h2>Add new stamp</h2>
+      <div class="lock-notice" id="lockNotice" style="display:none;"></div>
 
       <div class="dropzone" id="dropzone">
         <div id="dzContent">
@@ -373,7 +375,7 @@
             <tr>
               <th style="width:50px;">Factory</th>
               <th style="width:38px;">No.</th>
-              <th>Stamp name</th>
+              <th>Stamp Name</th>
               <th>Receiver/ID</th>
               <th>Dept.</th>
               <th style="width:60px;">Qty</th>
@@ -387,9 +389,11 @@
     </div>
   </div>
 
-  <div class="card sign-status-card" id="signStatusCard">
-    <h2 id="lblApprovedBy">Sign Status</h2>
-    <div id="signBox"></div>
+  <!-- Sign Status / Approval panel — shown at the bottom of Worker Packing Chop and QC
+       Packing Chop tabs (hidden on Summary). Content is built by renderApprovalRow(). -->
+  <div class="card" id="signPanelCard" style="margin-top:18px;display:none;">
+    <h2>Sign Status</h2>
+    <div class="approval-row" id="approvalRow"></div>
   </div>
 
   <div class="summary-section" id="sectionSummary">
@@ -487,6 +491,16 @@ const FACTORY_LIST = ["F1","F2","F3","F4","F6","F7"];
 const DEPT_FIXED = "Packing";
 const APPROVER_NAME = "Kim Joo Shik";
 
+// ---- Sign Status / Approval panel config (see sign-status-approval-panel skill) ----
+// Mật khẩu Sign-Off / Unlock — chỉ nhằm chặn bấm nhầm, KHÔNG phải bảo mật thật sự
+// (nằm plain-text trong JS phía client). Đổi tại đây nếu cần.
+const SIGN_PASSWORD = "kimjs2026";
+// Ảnh "chữ ký" hiển thị khi 1 tab đã SIGNED OFF. Hiện tại chưa có ảnh chữ ký/con dấu
+// quét thật nên dùng 1 SVG dạng script-font làm placeholder — thay bằng ảnh chữ ký
+// thật (data:image/png;base64,...) bất cứ lúc nào bằng cách đổi hằng số này, không
+// cần sửa gì khác.
+const SIG_IMG = "data:image/png;base64,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";
+
 // Employee directory (Factory / ID / Full Name) — used to power the
 // Receiver/ID search-select in the "Add new stamp" form.
 // URL Web App Apps Script trả danh sách receiver (xem ReceiverAPI.gs)
@@ -518,20 +532,21 @@ let state = {
   reportBy: "",
   filter: "ALL",
   yearFilter: String(yearOptionsList()[0]), // default to the latest year (e.g. 2026) instead of "All"
-  signedByYear: {},      // { "<year>": {signed, signatureDataUrl, comment} } — sign status is tracked
-                          // per calendar year; once a new year starts, that year is unsigned again
-  activeSection: "WORKER" // "WORKER" or "QC" — which tab is currently shown
+  activeSection: "WORKER", // "WORKER" or "QC" — which tab is currently shown
+  // Sign Status: 2 tab (WORKER / QC) khóa/mở ĐỘC LẬP với nhau.
+  // Giá trị mặc định Pending ở đây chỉ dùng trước khi loadState() nạp dữ liệu thật
+  // từ Meta sheet — action=load trả kèm luôn field "sign" này (không tốn round-trip riêng).
+  sign: {
+    WORKER: { approved:false, approvedAt:null, approvedBy:null, rejected:false, rejectedAt:null, rejectedBy:null, rejectComment:'' },
+    QC:     { approved:false, approvedAt:null, approvedBy:null, rejected:false, rejectedAt:null, rejectedBy:null, rejectComment:'' }
+  },
+  // UI tạm thời của Sign Status panel khi đang thao tác (nhập mật khẩu, chọn Approved/Not
+  // Sign, nhập comment...). Dùng chung cho tab đang mở, reset về rỗng mỗi khi đổi tab
+  // (xem resetSignUI() + switchTab, đúng theo mục "Namespacing" của skill).
+  signUI: { confirmingSign:false, confirmingUnlock:false, confirmingReject:false, showSignOffActions:false, pwInput:'', pwError:'', rejectComment:'' }
 };
-
-// The "Approved by" sign box always applies to the real current calendar year, so once that
-// year rolls over the form automatically goes back to "not signed" (a fresh year needs a fresh sign-off).
-function currentSignYear(){ return String(new Date().getFullYear()); }
-function currentYearSignData(){
-  const y = currentSignYear();
-  if(!state.signedByYear[y]){
-    state.signedByYear[y] = { signed: false, signatureDataUrl: null, comment: null, signedAt: null };
-  }
-  return state.signedByYear[y];
+function resetSignUI(){
+  state.signUI = { confirmingSign:false, confirmingUnlock:false, confirmingReject:false, showSignOffActions:false, pwInput:'', pwError:'', rejectComment:'' };
 }
 
 // Year options for the "Add new stamp" form and the Year filter: 2025 through the current year.
@@ -576,16 +591,9 @@ async function loadState(){
     if(data && !data.error){
       state.entries = data.entries || [];
       state.reportBy = data.reportBy || "";
-      state.signedByYear = data.signedByYear || {};
-      // Migrate old saves (from before sign-by-year existed) into the current year's bucket,
-      // so an existing signature isn't silently lost on first load after this update.
-      if(Object.keys(state.signedByYear).length === 0 && (data.signed || data.comment)){
-        state.signedByYear[currentSignYear()] = {
-          signed: data.signed || false,
-          signatureDataUrl: data.signatureDataUrl || null,
-          comment: data.comment || null
-        };
-      }
+      // Sign Status của cả 2 tab được gộp sẵn trong response action=load (xem loadState()
+      // trong Entries.gs) — KHÔNG gọi thêm request riêng, để trang vẫn chỉ tốn 1 round-trip.
+      if(data.sign){ state.sign = data.sign; }
 
       // Sheet chỉ lưu imageFileId/imageUrl (ảnh nằm trên Drive), không lưu
       // base64 trực tiếp trong ô để tránh vượt giới hạn dung lượng cell.
@@ -622,7 +630,6 @@ async function loadState(){
   document.getElementById('fReportBy').value = state.reportBy;
   populateYearSelect();
   updateFactoryPlaceholderColor();
-  renderSignBox();
   render();
 }
 async function saveState(){
@@ -635,8 +642,7 @@ async function saveState(){
       body: JSON.stringify({
         action: 'save',
         entries: state.entries,
-        reportBy: state.reportBy,
-        signedByYear: state.signedByYear
+        reportBy: state.reportBy
       })
     });
     const data = await res.json();
@@ -661,6 +667,239 @@ async function saveState(){
   }catch(e){
     console.error('save failed', e);
     alert('Không kết nối được tới server để lưu dữ liệu. Vui lòng thử lại.');
+  }
+}
+
+// ============================================================
+// Sign Status / Approval panel (ported from sign-status-approval-panel skill)
+// State machine: Pending -> (password) -> Approved / Not Sign w/Comment -> Signed off /
+// Not signed -> (password) -> Unlock -> Pending. WORKER và QC có trạng thái độc lập,
+// namespaced bởi `section` (đọc từ state.activeSection tại thời điểm thao tác).
+// ============================================================
+
+// 1 hàm chung gửi 1 request POST duy nhất tới action sign/unlock/reject — cùng API_URL
+// và cùng pattern "server tự đọc-sửa-ghi, trả về toàn bộ state mới nhất" như saveState().
+async function applyDeltaSign(action, payload){
+  const section = state.activeSection;
+  try{
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action, section }, payload))
+    });
+    const data = await res.json();
+    if(data && data.sign){ state.sign = data.sign; }
+    if(data && data.error){
+      console.error('sign action backend error:', data.error);
+      alert('Thao tác Sign Status thất bại: ' + data.error);
+    }
+  }catch(e){
+    console.error('sign action failed', e);
+    alert('Không kết nối được tới server để cập nhật Sign Status. Vui lòng thử lại.');
+  }
+  render();
+}
+
+// Bước 1: bấm "Sign-Off" -> hỏi mật khẩu trước.
+function askSignConfirm(){
+  state.signUI.confirmingSign = true; state.signUI.showSignOffActions = false; state.signUI.confirmingReject = false;
+  state.signUI.pwInput=''; state.signUI.pwError=''; render();
+  setTimeout(()=>{ const el=document.getElementById('pwField'); if(el) el.focus(); },0);
+}
+function cancelSignConfirm(){
+  state.signUI.confirmingSign = false; state.signUI.showSignOffActions = false; state.signUI.pwInput=''; state.signUI.pwError=''; render();
+}
+// Bước 2: mật khẩu đúng -> hiện lựa chọn Approved / Not Sign w/Comment / Cancel.
+function confirmSignPassword(){
+  if(state.signUI.pwInput !== SIGN_PASSWORD){ state.signUI.pwError = 'Incorrect password.'; render(); return; }
+  state.signUI.confirmingSign = false; state.signUI.pwInput=''; state.signUI.pwError=''; state.signUI.showSignOffActions = true;
+  render();
+}
+// Cancel từ màn hình Approved / Not Sign w/Comment -> về trạng thái ban đầu.
+function cancelSignOffActions(){
+  state.signUI.showSignOffActions = false; state.signUI.confirmingReject = false; state.signUI.rejectComment='';
+  state.signUI.pwInput=''; state.signUI.pwError=''; render();
+}
+// Bấm "Approved" (đã xác thực mật khẩu) -> sign off ngay.
+async function doSignApprove(){
+  state.signUI.showSignOffActions = false;
+  await applyDeltaSign('sign', { approvedBy: APPROVER_NAME });
+}
+
+function askUnlockConfirm(){
+  state.signUI.confirmingUnlock = true; state.signUI.pwInput=''; state.signUI.pwError=''; render();
+  setTimeout(()=>{ const el=document.getElementById('pwFieldUnlock'); if(el) el.focus(); },0);
+}
+function cancelUnlockConfirm(){ state.signUI.confirmingUnlock = false; state.signUI.pwInput=''; state.signUI.pwError=''; render(); }
+async function doUnlockApprove(){
+  if(state.signUI.pwInput !== SIGN_PASSWORD){ state.signUI.pwError = 'Incorrect password.'; render(); return; }
+  state.signUI.confirmingUnlock = false; state.signUI.pwInput=''; state.signUI.pwError=''; state.signUI.showSignOffActions = false;
+  await applyDeltaSign('unlock', {});
+}
+
+// Bấm "Not Sign w/Comment" -> hiện ô nhập comment (mật khẩu đã xác thực từ bước 2).
+function askRejectConfirm(){
+  state.signUI.confirmingReject = true; state.signUI.pwInput=''; state.signUI.pwError=''; state.signUI.rejectComment=''; render();
+  setTimeout(()=>{ const el=document.getElementById('rejectCommentField'); if(el) el.focus(); },0);
+}
+function cancelRejectConfirm(){
+  state.signUI.confirmingReject = false; state.signUI.showSignOffActions = false;
+  state.signUI.pwInput=''; state.signUI.pwError=''; state.signUI.rejectComment=''; render();
+}
+async function doRejectApprove(){
+  if(!state.signUI.rejectComment.trim()){ state.signUI.pwError = 'Please enter a comment.'; render(); return; }
+  const comment = state.signUI.rejectComment.trim();
+  state.signUI.confirmingReject = false; state.signUI.pwInput=''; state.signUI.pwError=''; state.signUI.rejectComment=''; state.signUI.showSignOffActions = false;
+  await applyDeltaSign('reject', { rejectedBy: APPROVER_NAME, rejectComment: comment });
+}
+
+function fmtSignDateTime(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return String(iso);
+  const pad = n=> String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function buildApprovalLeftHtml(section){
+  const s = state.sign[section] || {};
+  if(s.approved){
+    return `
+      <span class="status-badge status-approved">&#10003; SIGNED OFF</span>
+      <div class="sig-stamp">
+        <img src="${SIG_IMG}" alt="Signature">
+        <div class="sig-meta"><b>${escapeHtml(s.approvedBy || APPROVER_NAME)}</b><br>${fmtSignDateTime(s.approvedAt)}</div>
+      </div>`;
+  }
+  if(s.rejected){
+    return `
+      <span class="status-badge status-rejected">&#10007; NOT SIGNED</span>
+      ${s.rejectComment ? `<span class="sig-meta">&ldquo;${escapeHtml(s.rejectComment)}&rdquo;</span>` : ''}`;
+  }
+  return `
+    <span class="status-badge status-pending">&#9679; PENDING SIGN-OFF</span>
+    <span style="font-size:12px;color:var(--sub);">QA Senior Manager: ${escapeHtml(APPROVER_NAME)}</span>`;
+}
+
+function buildApprovalRightHtml(section){
+  const s = state.sign[section] || {};
+  const locked = !!(s.approved || s.rejected);
+  const ui = state.signUI;
+
+  if(locked && ui.confirmingUnlock){
+    return `
+      <div class="confirm-box">
+        <span>Enter password to unlock:</span>
+        <input type="password" id="pwFieldUnlock" value="${escapeHtml(ui.pwInput)}">
+        <button class="dz-btn btn-confirm" id="unlockYes">Confirm</button>
+        <button class="dz-btn btn-cancel-plain" id="unlockNo">Cancel</button>
+        ${ui.pwError ? `<span class="pw-error">${escapeHtml(ui.pwError)}</span>` : ''}
+      </div>`;
+  }
+  if(locked){
+    return `<button class="dz-btn" id="unlockBtn">Unlock</button>`;
+  }
+  if(ui.confirmingSign){
+    return `
+      <div class="confirm-box">
+        <span>Enter password to sign off:</span>
+        <input type="password" id="pwField" value="${escapeHtml(ui.pwInput)}">
+        <button class="dz-btn btn-confirm" id="signYes">Confirm</button>
+        <button class="dz-btn btn-cancel-plain" id="signNo">Cancel</button>
+        ${ui.pwError ? `<span class="pw-error">${escapeHtml(ui.pwError)}</span>` : ''}
+      </div>`;
+  }
+  if(ui.showSignOffActions && ui.confirmingReject){
+    return `
+      <div class="confirm-box reject-box">
+        <span>Reason for not signing:</span>
+        <textarea id="rejectCommentField" placeholder="Enter comment...">${escapeHtml(ui.rejectComment)}</textarea>
+        <div class="reject-actions">
+          <button class="dz-btn" id="rejectYes">Submit</button>
+          <button class="dz-btn btn-cancel-plain" id="rejectCancelBtn">Cancel</button>
+        </div>
+        ${ui.pwError ? `<span class="pw-error">${escapeHtml(ui.pwError)}</span>` : ''}
+      </div>`;
+  }
+  if(ui.showSignOffActions){
+    return `
+      <div class="approval-actions">
+        <button class="dz-btn btn-approve" id="approveBtn">Approved</button>
+        <button class="dz-btn btn-notsign" id="notSignBtn">Not Sign w/Comment</button>
+        <button class="dz-btn btn-cancel-plain" id="cancelActionBtn">Cancel</button>
+      </div>`;
+  }
+  const hasRows = currentSectionEntries().length > 0;
+  return `<button class="dz-btn btn-signoff" id="signOffBtn" ${hasRows ? '' : 'disabled'}><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.7 4.3a1 1 0 0 1 1.4 0l2.6 2.6a1 1 0 0 1 0 1.4L9.4 18.6l-4 1 1-4L15.7 4.3z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sign-Off</button>`;
+}
+
+function bindApprovalRowEvents(){
+  const sob = document.getElementById('signOffBtn'); if(sob) sob.onclick = askSignConfirm;
+  const sy = document.getElementById('signYes'); if(sy) sy.onclick = confirmSignPassword;
+  const sn = document.getElementById('signNo'); if(sn) sn.onclick = cancelSignConfirm;
+  const pwf = document.getElementById('pwField');
+  if(pwf){ pwf.oninput = e=>{ state.signUI.pwInput = e.target.value; }; pwf.onkeydown = e=>{ if(e.key==='Enter') confirmSignPassword(); }; }
+
+  const apb = document.getElementById('approveBtn'); if(apb) apb.onclick = doSignApprove;
+  const nsb = document.getElementById('notSignBtn'); if(nsb) nsb.onclick = askRejectConfirm;
+  const cab = document.getElementById('cancelActionBtn'); if(cab) cab.onclick = cancelSignOffActions;
+
+  const rjy = document.getElementById('rejectYes'); if(rjy) rjy.onclick = doRejectApprove;
+  const rjcb = document.getElementById('rejectCancelBtn'); if(rjcb) rjcb.onclick = cancelRejectConfirm;
+  const rjc = document.getElementById('rejectCommentField');
+  if(rjc){ rjc.oninput = e=>{ state.signUI.rejectComment = e.target.value; }; }
+
+  const ub = document.getElementById('unlockBtn'); if(ub) ub.onclick = askUnlockConfirm;
+  const uy = document.getElementById('unlockYes'); if(uy) uy.onclick = doUnlockApprove;
+  const un = document.getElementById('unlockNo'); if(un) un.onclick = cancelUnlockConfirm;
+  const pwfu = document.getElementById('pwFieldUnlock');
+  if(pwfu){ pwfu.oninput = e=>{ state.signUI.pwInput = e.target.value; }; pwfu.onkeydown = e=>{ if(e.key==='Enter') doUnlockApprove(); }; }
+}
+
+// Panel chỉ hiện ở tab Worker Packing Chop / QC Packing Chop, ẩn ở tab Summary.
+function renderApprovalRow(){
+  const card = document.getElementById('signPanelCard');
+  const section = state.activeSection;
+  if(section !== 'WORKER' && section !== 'QC'){
+    if(card) card.style.display = 'none';
+    return;
+  }
+  if(card) card.style.display = '';
+  const row = document.getElementById('approvalRow');
+  row.innerHTML = `
+    <div class="approval-left">${buildApprovalLeftHtml(section)}</div>
+    <div>${buildApprovalRightHtml(section)}</div>
+  `;
+  bindApprovalRowEvents();
+}
+
+// Khóa toàn bộ form "Add new stamp" + nút xoá trong bảng khi tab hiện tại đã Signed off /
+// Not signed (locked = approved || rejected). Mở lại bằng nút "Unlock" trong Sign Status panel.
+function updateLockUI(){
+  const section = state.activeSection;
+  const isEntrySection = (section === 'WORKER' || section === 'QC');
+  const s = isEntrySection ? state.sign[section] : null;
+  const locked = !!(s && (s.approved || s.rejected));
+
+  ['fFactory','fStampName','fReceiver','fQty','fStatus','btnAdd','btnTakePhoto','btnUploadFile'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = locked;
+  });
+  const dz = document.getElementById('dropzone');
+  if(dz) dz.classList.toggle('locked', locked);
+
+  document.querySelectorAll('#tbody .btn-del').forEach(btn=> btn.disabled = locked);
+
+  const notice = document.getElementById('lockNotice');
+  if(notice){
+    if(locked){
+      notice.style.display = 'block';
+      notice.textContent = s.rejected
+        ? 'This form has been marked not signed — no further changes allowed. Click "Unlock" below to make changes.'
+        : 'This form has been signed off — no further changes allowed. Click "Unlock" below to make changes.';
+    }else{
+      notice.style.display = 'none';
+    }
   }
 }
 
@@ -745,6 +984,8 @@ function renderTable(){
   });
   tbody.querySelectorAll('.btn-del').forEach(btn=>{
     btn.onclick = ()=>{
+      const _s = state.sign[state.activeSection];
+      if(_s && (_s.approved || _s.rejected)) return; // đã disable ở UI, chặn thêm cho chắc
       showConfirmModal('Are you sure to delete?', ()=>{
         const removed = state.entries.find(e=>e.id === btn.dataset.id);
         state.entries = state.entries.filter(e=>e.id !== btn.dataset.id);
@@ -792,8 +1033,9 @@ function escapeHtml(s){
 function render(){
   renderFilterOptions();
   renderTable();
-  applyLockState();
   toggleSummarySection();
+  renderApprovalRow();
+  updateLockUI();
 }
 
 // ---- Summary tab: toggle visibility + build the combo (stacked bar + total line) charts ----
@@ -844,7 +1086,6 @@ const LINE_DATALABELS = (color)=> ({
 function toggleSummarySection(){
   const isSummary = state.activeSection === 'SUMMARY';
   document.getElementById('sectionGrid').style.display = isSummary ? 'none' : '';
-  document.getElementById('signStatusCard').style.display = isSummary ? 'none' : '';
   document.getElementById('sectionSummary').style.display = isSummary ? 'block' : 'none';
   if(isSummary){
     // Chart.js/datalabels are only fetched the first time the Summary tab is opened.
@@ -1178,6 +1419,9 @@ document.querySelectorAll('.tab-btn').forEach(tab=>{
     // Default the year filter to the latest year available for this tab's data
     // (falls back to the current calendar year if the tab has no entries yet).
     state.yearFilter = String(yearsInUse()[0] || yearOptionsList()[0]);
+    // Reset mọi thao tác Sign Status đang dở (đang hỏi mật khẩu, đang nhập comment...)
+    // khi đổi tab — tránh việc ô nhập mật khẩu ở tab A còn hiện khi đã nhảy sang tab B.
+    resetSignUI();
     document.querySelectorAll('.tab-btn').forEach(t=> t.classList.toggle('active', t.dataset.section===section));
     render();
   });
@@ -1188,228 +1432,14 @@ document.getElementById('fReportBy').addEventListener('input', e=>{
   saveState();
 });
 
-// ---- Signature (password-protected sign-off, like the Overtime form) ----
-// Actual scanned signature image, provided by the approver (transparent background)
-const SIGNATURE_IMAGE_BASE64 = "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";
-const SIGN_PASSWORD = 'kimjs2026';
-
-// Format a Date as "DD/MM/YYYY, HH:MM:SS" to match the Sign Status card.
-function formatSignTimestamp(d){
-  const p = n => String(n).padStart(2,'0');
-  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()}, ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
-function renderSignBox(){
-  const box = document.getElementById('signBox');
-  const sign = currentYearSignData();
-
-  if(sign.signed && sign.signatureDataUrl){
-    // Signed & locked for this year
-    box.innerHTML = `
-      <div class="sign-status-row">
-        <div class="sign-status-left">
-          <span class="ss-badge ss-badge-signed">✓ SIGNED OFF</span>
-          <div class="ss-sig-box">
-            <img src="${sign.signatureDataUrl}" alt="signature">
-            <div>
-              <div class="ss-sig-name">Kim Joo Shik</div>
-              <div class="ss-sig-date">${sign.signedAt || ''}</div>
-            </div>
-          </div>
-        </div>
-        <button class="btn-ss-unlock" id="btnUnlock" type="button">🔒 Unlock / Edit</button>
-      </div>
-    `;
-    document.getElementById('btnUnlock').onclick = ()=> doUnlock();
-  }else if(sign.comment){
-    // Not signed, but a comment was left instead
-    box.innerHTML = `
-      <div class="sign-status-row">
-        <div class="sign-status-left">
-          <span class="ss-badge ss-badge-comment">⚠ NOT SIGNED</span>
-          <div class="ss-comment-box">
-            <div class="ss-comment-label">Comment</div>
-            <div class="ss-comment-text">${escapeHtml(sign.comment)}</div>
-          </div>
-        </div>
-        <div class="ss-btn-group">
-          <button class="btn-sign-done" id="btnRetrySign" type="button">✅ Sign now</button>
-          <button class="btn-sign-comment" id="btnEditComment" type="button">✎ Edit</button>
-          <button class="btn-ss-unlock" id="btnUnlockComment" type="button">🔒 Unlock</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('btnRetrySign').onclick = ()=> requestSignPasswordThenComplete();
-    document.getElementById('btnEditComment').onclick = ()=> showCommentInput();
-    document.getElementById('btnUnlockComment').onclick = ()=> doUnlock();
-  }else{
-    // Nothing yet for this year — show the initial Pending Sign-off state
-    box.innerHTML = `
-      <div class="sign-status-row">
-        <div class="sign-status-left">
-          <span class="ss-badge ss-badge-pending">● PENDING SIGN-OFF</span>
-          <span class="ss-meta">QA Senior Manager: Kim Joo Shik</span>
-        </div>
-        <button class="btn-ss-signoff" id="btnSign" type="button">✎ SIGN OFF (Kim Joo Shik)</button>
-      </div>
-    `;
-    document.getElementById('btnSign').onclick = ()=> requestSignPassword();
-  }
-  applyLockState();
-}
-
-function requestSignPassword(){
-  const pwd = prompt('Enter password to sign as Kim Joo Shik:');
-  if(pwd === null) return; // cancelled — stay as-is, nothing changes
-  if(pwd !== SIGN_PASSWORD){
-    alert('Incorrect password.');
-    return;
-  }
-  showSignChoices();
-}
-
-function showSignChoices(){
-  const box = document.getElementById('signBox');
-  box.innerHTML = `
-    <div class="sign-status-row">
-      <div class="sign-status-left">
-        <span class="ss-badge ss-badge-pending">● PENDING SIGN-OFF</span>
-        <span class="ss-meta">QA Senior Manager: Kim Joo Shik</span>
-      </div>
-      <div class="ss-btn-group">
-        <button class="btn-sign-done" id="btnSignDone" type="button">✅ Done</button>
-        <button class="btn-sign-comment" id="btnSignComment" type="button">✎ Not Sign w/Comment</button>
-        <button class="btn-cancel-choice" id="btnCancelChoice" type="button">Cancel</button>
-      </div>
-    </div>
-  `;
-  document.getElementById('btnSignDone').onclick = ()=> completeSign();
-  document.getElementById('btnSignComment').onclick = ()=> showCommentInput();
-  document.getElementById('btnCancelChoice').onclick = ()=> renderSignBox();
-}
-
-// "Done" path — password was already verified in requestSignPassword(), so just apply the signature
-function completeSign(){
-  const sign = currentYearSignData();
-  sign.signed = true;
-  sign.signatureDataUrl = 'data:image/png;base64,' + SIGNATURE_IMAGE_BASE64;
-  sign.comment = null;
-  sign.signedAt = formatSignTimestamp(new Date());
-  saveState();
-  renderSignBox();
-}
-
-// Used by the "Sign now" button in the comment view — asks the password, then signs directly.
-// If cancelled or the password is wrong, the existing comment is left untouched (not cleared).
-function requestSignPasswordThenComplete(){
-  const pwd = prompt('Enter password to sign as Kim Joo Shik:');
-  if(pwd === null) return;
-  if(pwd !== SIGN_PASSWORD){
-    alert('Incorrect password.');
-    return;
-  }
-  completeSign();
-}
-
-// "Not Sign w/Comment" path — shows a comment box; the result is shown in the same box
-function showCommentInput(){
-  const box = document.getElementById('signBox');
-  const sign = currentYearSignData();
-  box.innerHTML = `
-    <div class="sign-status-row">
-      <div class="sign-status-left" style="flex:1;min-width:220px;">
-        <textarea id="commentInput" rows="3" style="width:100%;" placeholder="Enter comment / reason for not signing...">${escapeHtml(sign.comment || '')}</textarea>
-      </div>
-      <div class="ss-btn-group">
-        <button class="btn-sign-comment" id="btnSubmitComment" type="button">Submit</button>
-        <button class="btn-cancel-choice" id="btnCancelComment" type="button">Cancel</button>
-      </div>
-    </div>
-  `;
-  document.getElementById('commentInput').focus();
-  document.getElementById('btnSubmitComment').onclick = ()=>{
-    const text = document.getElementById('commentInput').value.trim();
-    if(!text){ alert('Please enter a comment.'); return; }
-    const sign = currentYearSignData();
-    sign.signed = false;
-    sign.signatureDataUrl = null;
-    sign.signedAt = null;
-    sign.comment = text;
-    saveState();
-    renderSignBox();
-  };
-  document.getElementById('btnCancelComment').onclick = ()=> renderSignBox();
-}
-
-// Unlock — same password as signing; removes the current signature or comment and unlocks the form
-function doUnlock(){
-  const pwd = prompt('Enter password to unlock (remove signature):');
-  if(pwd === null) return;
-  if(pwd !== SIGN_PASSWORD){
-    alert('Incorrect password.');
-    return;
-  }
-  const sign = currentYearSignData();
-  const msg = (sign.signed && sign.signatureDataUrl)
-    ? 'Unlock the form? This will remove the current signature for ' + currentSignYear() + '.'
-    : 'Unlock the form? This will remove the current comment for ' + currentSignYear() + '.';
-  if(confirm(msg)){
-    sign.signed = false;
-    sign.signatureDataUrl = null;
-    sign.comment = null;
-    sign.signedAt = null;
-    saveState();
-    renderSignBox();
-  }
-}
-
-// ---- Lock the data-entry form once the sheet has been signed/approved ----
-const LOCK_FIELD_IDS = ['fFactory','fYear','fStampName','fQty','fStatus','fReportBy'];
-function applyLockState(){
-  const sign = currentYearSignData();
-  const locked = !!(sign.signed && sign.signatureDataUrl);
-
-  LOCK_FIELD_IDS.forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.disabled = locked;
-  });
-
-  const addBtn = document.getElementById('btnAdd');
-  if(addBtn){
-    addBtn.disabled = locked;
-    addBtn.style.opacity = locked ? '.55' : '';
-    addBtn.style.cursor = locked ? 'default' : 'pointer';
-  }
-
-  if(receiverInput){
-    receiverInput.disabled = locked;
-    if(locked) hideReceiverDropdown();
-  }
-
-  const dz = document.getElementById('dropzone');
-  const fi = document.getElementById('fileInput');
-  const fiCam = document.getElementById('fileInputCamera');
-  const btnCam = document.getElementById('btnTakePhoto');
-  const btnUp = document.getElementById('btnUploadFile');
-  if(dz){
-    dz.classList.toggle('locked', locked);
-    dz.style.opacity = locked ? '.55' : '';
-  }
-  if(fi) fi.disabled = locked;
-  if(fiCam) fiCam.disabled = locked;
-  if(btnCam) btnCam.disabled = locked;
-  if(btnUp) btnUp.disabled = locked;
-
-  document.querySelectorAll('.btn-del').forEach(btn=>{
-    btn.disabled = locked;
-    btn.style.opacity = locked ? '.4' : '';
-    btn.style.cursor = locked ? 'default' : 'pointer';
-  });
-}
-
 // ---- Add entry ----
 
 document.getElementById('btnAdd').onclick = ()=>{
+  const _s = state.sign[state.activeSection];
+  if(_s && (_s.approved || _s.rejected)){
+    alert('This form has been signed off / marked not signed — no further changes allowed. Click "Unlock" below to make changes.');
+    return;
+  }
   const factory = document.getElementById('fFactory').value;
   const year = document.getElementById('fYear').value;
   const stamp_name = document.getElementById('fStampName').value.trim();
@@ -2172,7 +2202,6 @@ async function exportToExcel(factories){
   // Other factory sheets are still created according to the current filter.
   const exportFactories = Array.from(new Set([...(factories || []), 'F7']));
   const exportDate = todayISO();
-  const sign = currentYearSignData(); // signature/comment for the current sign-off year
   const logoImageId = wb.addImage({ base64: LOGO_BASE64, extension: 'png' });
 
   const NAVY = 'FF1B3A63';
@@ -2315,33 +2344,11 @@ async function exportToExcel(factories){
     approvedLabelCell.font = LABEL_FONT;
     approvedLabelCell.alignment = CENTER;
 
-    // Signature row — sits below "Approved by:" and above the printed name
+    // Signature row — sits below "Approved by:" and above the printed name (left blank for manual sign-off)
     currentRow += 1;
     const sigRowIdx = currentRow;
     ws.mergeCells(`D${sigRowIdx}:F${sigRowIdx}`);
-    if(sign.signed && sign.signatureDataUrl){
-      ws.getRow(sigRowIdx).height = 36;
-      const sigImgId = wb.addImage({ base64: sign.signatureDataUrl, extension: 'png' });
-      const sigW = 110, sigH = 44;
-      const dCol = ws.getColumn(4);
-      const dWidthPx = Math.round((dCol.width || 12) * 7 + 5);
-      const eWidthPx = Math.round((ws.getColumn(5).width || 11) * 7 + 5);
-      const fWidthPx = Math.round((ws.getColumn(6).width || 16) * 7 + 5);
-      const mergedWidthPx = dWidthPx + eWidthPx + fWidthPx;
-      const sigColOff = Math.max(0, Math.round(((mergedWidthPx - sigW) / 2) * 9525));
-      ws.addImage(sigImgId, {
-        tl: { col: 3, row: sigRowIdx - 1, colOff: sigColOff, rowOff: 0 },
-        ext: { width: sigW, height: sigH }
-      });
-    }else if(sign.comment){
-      ws.getRow(sigRowIdx).height = 26;
-      const commentCell = ws.getCell(`D${sigRowIdx}`);
-      commentCell.value = 'Not signed — Comment: ' + sign.comment;
-      commentCell.font = { name: FONT_NAME, size: 9, italic: true, color: { argb: 'FFB7791F' } };
-      commentCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    }else{
-      ws.getRow(sigRowIdx).height = 26;
-    }
+    ws.getRow(sigRowIdx).height = 26;
 
     // Printed name
     currentRow += 1;
