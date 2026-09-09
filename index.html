@@ -597,13 +597,27 @@ async function loadState(){
       // trong Entries.gs) — KHÔNG gọi thêm request riêng, để trang vẫn chỉ tốn 1 round-trip.
       if(data.sign){ state.sign = data.sign; }
 
+      // Render NGAY với entries vừa nhận được (chỉ mất 1 round-trip ~1-2s tới
+      // Apps Script), KHÔNG đợi bước tải ảnh base64 bên dưới. Đây là lý do
+      // trước đây trang có cảm giác "mở lên là 0, phải bấm sang tab khác mới
+      // thấy dữ liệu": toàn bộ hàm loadState() (kể cả phần tải ảnh, có thể
+      // mất rất lâu nếu nhiều dòng có ảnh) chạy xong rồi mới gọi render() lần
+      // đầu tiên, nên bảng trống suốt thời gian đó và chỉ "tình cờ" đầy lên
+      // đúng lúc người dùng bấm tab (vì lúc đó request nền vừa xong).
+      document.getElementById('fReportBy').value = state.reportBy;
+      populateYearSelect();
+      updateFactoryPlaceholderColor();
+      render();
+
       // Sheet chỉ lưu imageFileId/imageUrl (ảnh nằm trên Drive), không lưu
       // base64 trực tiếp trong ô để tránh vượt giới hạn dung lượng cell.
       // Ở đây tải lại base64 cho các dòng có ảnh để hiển thị thumbnail
       // và phục vụ xuất Excel (ExcelJS cần base64, không dùng được URL).
       // Gộp thành 1 lần gọi bulk duy nhất (thay vì 1 request riêng cho mỗi
       // ảnh) -> đây chính là nguyên nhân trang mất ~2 phút để load khi có
-      // nhiều dòng có ảnh (mỗi round-trip tới Apps Script tốn ~1-2s).
+      // nhiều dòng có ảnh (mỗi round-trip tới Apps Script tốn ~1-2s). Bước
+      // này chạy NGẦM sau khi bảng đã hiện dữ liệu — ảnh sẽ lấp dần vào các
+      // thumbnail (render() gọi lại bên dưới) mà không chặn dữ liệu chính.
       const idsToFetch = Array.from(new Set(
         state.entries
           .filter(en => !en.imageDataUrl && en.imageFileId)
@@ -625,13 +639,25 @@ async function loadState(){
       }
     }else if(data && data.error){
       console.error('loadState backend error:', data.error);
+      // Không có entries hợp lệ từ backend -> vẫn phải cập nhật UI (ẩn "Loading...",
+      // hiện đúng trạng thái rỗng) thay vì để bảng treo mãi ở trạng thái chờ.
+      document.getElementById('fReportBy').value = state.reportBy;
+      populateYearSelect();
+      updateFactoryPlaceholderColor();
+      render();
     }
   }catch(e){
     console.error('loadState failed', e);
+    // Request đầu tiên (action=load) lỗi (mất mạng, backend lỗi...) -> vẫn phải render
+    // để tắt trạng thái "đang tải", không thì trang treo hiển thị 0 dòng vĩnh viễn.
+    document.getElementById('fReportBy').value = state.reportBy;
+    populateYearSelect();
+    updateFactoryPlaceholderColor();
+    render();
+    return;
   }
-  document.getElementById('fReportBy').value = state.reportBy;
-  populateYearSelect();
-  updateFactoryPlaceholderColor();
+  // Ảnh (nếu có) đã tải xong ở trên -> render lại 1 lần nữa để lấp thumbnail vào bảng
+  // (dữ liệu chính đã hiện từ lúc nãy, lần render này chỉ để cập nhật ảnh).
   render();
 }
 async function saveState(){
