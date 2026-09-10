@@ -69,6 +69,12 @@
   .btn-export:disabled{background:#9BB;opacity:.6;cursor:default;}
   /* Nút Refresh: giảm chiều cao còn ~8.9mm (~33.6px), bằng chiều cao ô "Worker Packing Chop" (padding 9px + font 13px) */
   #btnRefreshSummary{padding:9px 16px;}
+  #btnRefreshSummary.spinning{pointer-events:none;opacity:.75}
+  #btnRefreshSummary .refresh-icon{display:inline-block}
+  #btnRefreshSummary.spinning .refresh-icon{animation:qa-refresh-spin .5s linear}
+  @keyframes qa-refresh-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .synced-badge{font-size:12px;font-weight:700;color:var(--good);opacity:0;transition:opacity .25s;display:inline-flex;align-items:center;gap:4px}
+  .synced-badge.show{opacity:1}
   .btn-del{background:#F5E4E2;color:var(--warn);padding:5px 9px;font-size:12px;font-weight:600;}
   .btn-del:hover{background:#eecdc9;}
 
@@ -290,7 +296,8 @@
     <div class="tab-btn active" id="tabWorker" data-section="WORKER">Worker Packing Chop<span class="count" id="totalCountWorker">0</span></div>
     <div class="tab-btn" id="tabQC" data-section="QC">QC Packing Chop<span class="count" id="totalCountQC">0</span></div>
     <div class="tab-btn" id="tabSummary" data-section="SUMMARY">Summary</div>
-    <button class="btn-export" id="btnRefreshSummary" style="margin-left:auto;">⟳ Refresh</button>
+    <span class="synced-badge" id="syncedBadge" style="margin-left:auto">✓ Synced</span>
+    <button class="btn-export" id="btnRefreshSummary" style="margin-left:12px;"><span class="refresh-icon">⟳</span> Refresh</button>
   </div>
 
   <div class="grid" id="sectionGrid">
@@ -1424,18 +1431,25 @@ document.getElementById('fFilterYear').addEventListener('change', e=>{
 
 document.getElementById('btnRefreshSummary').addEventListener('click', async ()=>{
   const btn = document.getElementById('btnRefreshSummary');
-  const originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Refreshing...';
+  btn.classList.remove('spinning');
+  void btn.offsetWidth;
+  btn.classList.add('spinning');
   try{
     await loadState(); // re-pulls saved entries from storage, then re-renders (including the charts)
+    showSyncedBadge();
   }catch(err){
     console.error('Refresh failed:', err);
   }finally{
-    btn.disabled = false;
-    btn.textContent = originalLabel;
+    setTimeout(()=>btn.classList.remove('spinning'),500);
   }
 });
+function showSyncedBadge(){
+  const b = document.getElementById('syncedBadge');
+  if(!b) return;
+  b.classList.add('show');
+  clearTimeout(showSyncedBadge._timer);
+  showSyncedBadge._timer = setTimeout(()=>b.classList.remove('show'),2000);
+}
 
 // ---- Tab switching (Worker Packing Chop / QC Packing Chop) ----
 document.querySelectorAll('.tab-btn').forEach(tab=>{
